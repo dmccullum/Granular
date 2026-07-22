@@ -1,0 +1,166 @@
+import AppKit
+import FilmifyCore
+import SwiftUI
+
+extension Notification.Name {
+    static let filmifyOpenURLs = Notification.Name("FilmifyOpenURLs")
+}
+
+final class FilmifyApplicationDelegate: NSObject, NSApplicationDelegate {
+    func application(_ application: NSApplication, open urls: [URL]) {
+        NotificationCenter.default.post(name: .filmifyOpenURLs, object: urls)
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+}
+
+@main
+struct FilmifyDesktopApp: App {
+    @NSApplicationDelegateAdaptor(FilmifyApplicationDelegate.self) private var appDelegate
+    @State private var model = AppModel()
+
+    var body: some Scene {
+        @Bindable var model = model
+
+        Window("Filmify", id: "main") {
+            ContentView()
+                .environment(model)
+        }
+        .defaultSize(width: 700, height: 400)
+        .restorationBehavior(.disabled)
+        .commands {
+            AboutCommands()
+            ViewerCommands(model: model)
+
+            CommandGroup(after: .newItem) {
+                Button(model.operationMode == .drop ? "Process Images…" : "Open Image…") {
+                    model.chooseImages()
+                }
+                .keyboardShortcut("o")
+
+                if model.operationMode == .edit, model.selectedSourceURL != nil {
+                    Button("Close Image") {
+                        model.closeEditorImage()
+                    }
+                }
+
+                Divider()
+
+                Button("Choose Instant Output Folder…") {
+                    model.chooseDropOutputFolder()
+                }
+                if model.operationMode == .edit {
+                    Button("Export…") {
+                        model.exportEditedImage()
+                    }
+                    .keyboardShortcut("s")
+                    .disabled(model.selectedSourceURL == nil || model.isExporting)
+                }
+
+                Button("Reveal Last Output") {
+                    model.revealLastOutput()
+                }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .disabled(model.completedJobCount == 0)
+            }
+
+            CommandMenu("Recipe") {
+                ForEach(model.availableRecipes) { recipe in
+                    Button(recipe.name) {
+                        model.selectRecipe(recipe)
+                    }
+                }
+
+                Divider()
+
+                Button("Save Current as Recipe…") {
+                    model.saveCurrentAsRecipe()
+                }
+                .disabled(model.operationMode != .edit)
+
+                Button("Manage Recipes…") {
+                    model.showRecipeManager = true
+                }
+
+                if model.isSelectedRecipeCustom {
+                    Button("Update Current Recipe") {
+                        model.updateSelectedRecipe()
+                    }
+                    Button("Delete Current Recipe", role: .destructive) {
+                        model.deleteSelectedRecipe()
+                    }
+                }
+
+                Divider()
+
+                Button("New Grain Pattern") {
+                    model.randomizeGrain()
+                }
+            }
+
+        }
+
+        Settings {
+            SettingsView()
+                .environment(model)
+        }
+
+        MenuBarExtra(
+            "Filmify",
+            systemImage: model.isWatching ? "drop.fill" : "drop",
+            isInserted: $model.showMenuBarExtra
+        ) {
+            MenuBarStatusView()
+                .environment(model)
+        }
+        .menuBarExtraStyle(.window)
+    }
+}
+
+private struct ViewerCommands: Commands {
+    @FocusedValue(\.filmifyViewerZoomController) private var zoomController
+    let model: AppModel
+
+    var body: some Commands {
+        CommandGroup(after: .toolbar) {
+            Button(model.showOriginal ? "Show Processed" : "Show Original") {
+                model.showOriginal.toggle()
+            }
+            .keyboardShortcut("\\", modifiers: [])
+            .disabled(model.operationMode != .edit || model.sourcePreview == nil)
+
+            Divider()
+
+            Button("Zoom In") {
+                zoomController?.zoomIn()
+            }
+            .keyboardShortcut("+", modifiers: [.command])
+            .disabled(model.operationMode != .edit || model.sourcePreview == nil || zoomController == nil)
+
+            Button("Zoom Out") {
+                zoomController?.zoomOut()
+            }
+            .keyboardShortcut("-", modifiers: [.command])
+            .disabled(model.operationMode != .edit || model.sourcePreview == nil || zoomController == nil)
+
+            Button("Zoom to Fit") {
+                zoomController?.fit()
+            }
+            .keyboardShortcut("0", modifiers: [.command])
+            .disabled(model.operationMode != .edit || model.sourcePreview == nil || zoomController == nil)
+        }
+    }
+}
+
+private struct AboutCommands: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Filmify") {
+                NSApp.activate(ignoringOtherApps: true)
+                AboutWindowController.shared.show()
+            }
+        }
+    }
+}
