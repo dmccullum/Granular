@@ -3,18 +3,22 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var model = model
 
-        Group {
+        ZStack {
             switch model.operationMode {
             case .drop:
                 DropModeView()
+                    .transition(modeContentTransition)
             case .edit:
                 EditModeView()
+                    .transition(modeContentTransition)
             }
         }
+        .animation(modeContentAnimation, value: model.operationMode)
         .frame(minWidth: 620, minHeight: 340)
         .overlay(alignment: .topTrailing) {
             if model.operationMode == .edit {
@@ -66,6 +70,19 @@ struct ContentView: View {
                 Text(model.startupError ?? "Unknown error")
             }
         )
+    }
+
+    private var modeContentTransition: AnyTransition {
+        if reduceMotion {
+            return .opacity
+        }
+        return .opacity.combined(with: .scale(scale: 0.992))
+    }
+
+    private var modeContentAnimation: Animation {
+        reduceMotion
+            ? .easeOut(duration: 0.12)
+            : .easeInOut(duration: 0.24)
     }
 }
 
