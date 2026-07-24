@@ -64,7 +64,7 @@ Then double-click it again.
 
 ## Preparing a source ZIP
 
-To create the archive intended for coworkers:
+To create a clean source archive for sharing or distribution:
 
 ```sh
 ./Scripts/package-source.sh
