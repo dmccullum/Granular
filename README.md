@@ -1,50 +1,51 @@
 # Filmify
 
-Filmify is a native macOS instant-processing and watched-folder utility for applying film-like tone and color, optical light shaping, lens diffusion, restrained halation, and light-responsive photographic grain to still images.
+Filmify is a native macOS app for giving still images a more photographic, film-like finish—quickly. It combines film tone, light shaping, lens diffusion, halation, and light-responsive grain in a focused workflow built for macOS.
 
-The first working vertical slice includes:
+## What it does
 
-- Finder drag-and-drop and Open With support for JPEG, HEIC, PNG, and TIFF
-- A compact Instant mode and a separate editing workspace with live preview, zoom, pan, original/effect comparison, and explicit export
-- A watched-folder workflow configured in Settings, with stable-file detection and a separate output folder
-- Three distinct built-in recipes, persistent user-created recipes with rename/delete management, and detailed per-effect controls
-- Seven curated spectral negative-to-print color stocks with a continuously adjustable blend and restrained tonal influence
-- Fixed processing order: film tone → spotlight/vignette → diffusion → halation → grain
-- Extended-linear Core Image rendering, source metadata preservation, optional GPS stripping, collision-safe filenames, and atomic output writes
-- A menu-bar watcher, launch-at-login setting, sandboxed folder bookmarks, and a signed local `.app` bundle
+- **Instant processing** — drop images onto Filmify and process them immediately with the selected recipe.
+- **Live editing** — open an image, fine-tune the look with a live preview, inspect details at any zoom level, compare original and processed output, then export.
+- **Watched folders** — automatically process new images placed in a selected folder.
+- **Recipes** — start with a small set of built-in looks, then save, rename, update, and delete your own.
+- **Film tone** — choose from curated color stocks and adjust exposure, contrast, saturation, vibrance, and warmth with a photographic response.
+- **Optical effects** — shape the frame with spotlight/vignette, Black Pro-Mist-style diffusion, restrained halation, and signal-dependent grain.
 
-## Run it
+Filmify processes JPEG, HEIC, PNG, and TIFF images. The rendering order is fixed:
 
-The packaged development build is at `dist/Filmify.app`. Double-click it, or run:
+`film tone → spotlight/vignette → diffusion → halation → grain`
 
-```sh
-open dist/Filmify.app
-```
+## Requirements
 
-Filmify currently targets macOS 26 so it can use the native Liquid Glass controls.
+- macOS 26 or later
+- Apple Silicon or an Intel Mac capable of running macOS 26
 
-## Build and test
+## Build from source
+
+Filmify currently ships as source. Building requires the full Xcode 26 application, including Icon Composer.
+
+The easiest route is to double-click **Build Filmify.command** in Finder. It creates the app at `dist/Filmify.app` and reveals it when finished.
+
+Or build from Terminal:
 
 ```sh
 swift test
 ./Scripts/build-app.sh
+open -R dist/Filmify.app
 ```
 
-For a coworker-friendly local build, double-click `Build Filmify.command`.
-Requirements and troubleshooting are in [BUILDING.md](BUILDING.md).
-Create a clean shareable source ZIP with `./Scripts/package-source.sh`.
+Detailed setup and troubleshooting instructions are in [BUILDING.md](BUILDING.md).
 
-The release script compiles the Swift package, builds the icon asset catalog, assembles the app bundle, applies sandbox entitlements, and ad-hoc signs it for local use. Distribution will require a Developer ID signature and notarization.
+## Notes on distribution
 
-`AppIcon.icon` is the canonical app-icon source. The build exports both the
-modern appearance-aware asset catalog and the flattened Finder fallback from
-that package; generated icon renditions are not stored as separate source
-assets.
+Local builds are ad-hoc signed for use on the Mac that builds them. A broadly distributable macOS release will require Developer ID signing and Apple notarization.
 
-The bundled color-stock cubes are selected from
-[ComfyUI-Darkroom](https://github.com/jeremieLouvaert/ComfyUI-Darkroom) and its
-MIT-licensed spectral film model. See `Resources/THIRD_PARTY_NOTICES.txt`.
-Stock and manufacturer names are descriptive; Filmify's simulations are not
-endorsed by or affiliated with their trademark owners.
+## Credits and attribution
 
-The product, interaction, imaging, architecture, validation, and delivery rationale is in [docs/PRODUCT_PLAN.md](docs/PRODUCT_PLAN.md).
+The bundled color-stock cubes are selected from [ComfyUI-Darkroom](https://github.com/jeremieLouvaert/ComfyUI-Darkroom) and its MIT-licensed spectral film model. See [THIRD_PARTY_NOTICES.txt](Resources/THIRD_PARTY_NOTICES.txt) for details.
+
+Film-stock and manufacturer names are descriptive only. Filmify is not endorsed by or affiliated with their trademark owners.
+
+## Further reading
+
+The product, interaction, imaging, validation, and delivery rationale lives in [docs/PRODUCT_PLAN.md](docs/PRODUCT_PLAN.md).
