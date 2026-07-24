@@ -77,6 +77,7 @@ final class AppModel {
         }
 
         restoreRecipes()
+        restoreRecipeSelection()
         restoreFolder(forKey: BookmarkKey.dropOutput) { dropOutputFolder = $0 }
         restoreFolder(forKey: BookmarkKey.watchInput) { watchedInputFolder = $0 }
         restoreFolder(forKey: BookmarkKey.watchOutput) { watchedOutputFolder = $0 }
@@ -93,6 +94,14 @@ final class AppModel {
 
     var currentRecipe: FilmRecipe {
         availableRecipes.first { $0.id == selectedRecipeID } ?? .classic35
+    }
+
+    var isRecipeModified: Bool {
+        recipe != currentRecipe
+    }
+
+    var recipeDisplayName: String {
+        isRecipeModified ? "Custom" : currentRecipe.name
     }
 
     var isSelectedRecipeCustom: Bool {
@@ -140,9 +149,12 @@ final class AppModel {
 
     private func resizeWindow(for mode: OperationMode, animated: Bool) {
         guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible }) else { return }
-        let contentSize = mode == .drop
+        var contentSize = mode == .drop
             ? NSSize(width: 700, height: 400)
-            : NSSize(width: 1_080, height: 720)
+            : NSSize(width: 1_080, height: 970)
+        if let visibleFrame = window.screen?.visibleFrame {
+            contentSize.height = min(contentSize.height, visibleFrame.height - 28)
+        }
         let targetFrameSize = window.frameRect(
             forContentRect: NSRect(origin: .zero, size: contentSize)
         ).size
@@ -168,6 +180,12 @@ final class AppModel {
     func selectRecipe(_ recipe: FilmRecipe) {
         selectedRecipeID = recipe.id
         self.recipe = recipe
+        persistRecipeSelection()
+        schedulePreview()
+    }
+
+    func recipeDidChange() {
+        persistRecipeSelection()
         schedulePreview()
     }
 
@@ -205,12 +223,22 @@ final class AppModel {
         savedRecipes[index] = updated
         recipe = updated
         persistRecipes()
+        persistRecipeSelection()
         statusMessage = "Updated recipe “\(updated.name)”"
     }
 
     func deleteSelectedRecipe() {
         guard let index = savedRecipes.firstIndex(where: { $0.id == selectedRecipeID }) else { return }
         let name = savedRecipes[index].name
+
+        let alert = NSAlert()
+        alert.messageText = "Delete “\(name)”?"
+        alert.informativeText = "This recipe will be permanently deleted. This cannot be undone."
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.hasDestructiveAction = true
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
         savedRecipes.remove(at: index)
         persistRecipes()
         selectRecipe(.classic35)
@@ -226,6 +254,7 @@ final class AppModel {
         savedRecipes[index].name = name
         if selectedRecipeID == id {
             recipe.name = name
+            persistRecipeSelection()
         }
         persistRecipes()
         statusMessage = "Renamed recipe to “\(name)”"
@@ -246,6 +275,11 @@ final class AppModel {
 
     func resetLightShaping() {
         recipe.lightShaping = currentRecipe.lightShaping
+        schedulePreview()
+    }
+
+    func resetTone() {
+        recipe.tone = currentRecipe.tone
         schedulePreview()
     }
 
@@ -354,6 +388,7 @@ final class AppModel {
 
     @discardableResult
     func processInstantly(_ urls: [URL], destinationOverride: URL? = nil) async -> Set<URL> {
+        persistRecipeSelection()
         let supported = urls.filter(Self.isSupportedImage)
         guard !supported.isEmpty else {
             statusMessage = "No supported images in that drop"
@@ -441,6 +476,7 @@ final class AppModel {
 
     private func exportEditor(sourceURL: URL, destinationURL: URL) async {
         guard let processingService else { return }
+        persistRecipeSelection()
         let job = ProcessingJob(sourceURL: sourceURL, state: .processing)
         jobs.insert(job, at: 0)
         isExporting = true
@@ -694,6 +730,37 @@ final class AppModel {
         UserDefaults.standard.set(data, forKey: RecipeKey.saved)
     }
 
+    private func restoreRecipeSelection() {
+        let defaults = UserDefaults.standard
+        guard let storedID = defaults.string(forKey: RecipeKey.selectedID),
+              let selected = availableRecipes.first(where: { $0.id == storedID }) else {
+            selectRecipe(.classic35)
+            return
+        }
+
+        selectedRecipeID = selected.id
+        if defaults.bool(forKey: RecipeKey.isModified),
+           let data = defaults.data(forKey: RecipeKey.working),
+           var working = try? JSONDecoder().decode(FilmRecipe.self, from: data) {
+            // Keep the originating recipe identity so Reset and Update still work.
+            working.id = selected.id
+            working.name = selected.name
+            recipe = working
+        } else {
+            recipe = selected
+        }
+        persistRecipeSelection()
+    }
+
+    private func persistRecipeSelection() {
+        let defaults = UserDefaults.standard
+        defaults.set(selectedRecipeID, forKey: RecipeKey.selectedID)
+        defaults.set(isRecipeModified, forKey: RecipeKey.isModified)
+        if let data = try? JSONEncoder().encode(recipe) {
+            defaults.set(data, forKey: RecipeKey.working)
+        }
+    }
+
     private func resolvedOutputType(for sourceURL: URL) -> UTType {
         switch outputOptions.format {
         case .jpeg: .jpeg
@@ -734,5 +801,8 @@ private enum RecipeKey {
     // Keep the original storage keys so existing user-created recipes survive the terminology change.
     static let saved = "presets.saved"
     static let amountScaleVersion = "presets.amountScaleVersion"
+    static let selectedID = "recipes.selectedID"
+    static let working = "recipes.working"
+    static let isModified = "recipes.isModified"
     static let currentAmountScaleVersion = 3
 }

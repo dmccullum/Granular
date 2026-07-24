@@ -4,6 +4,8 @@ import Foundation
 
 public enum FilmRendererError: LocalizedError {
     case kernelCompilationFailed(String)
+    case filmStockUnavailable(String)
+    case filmStockMalformed(String)
     case imageLoadFailed(URL)
     case renderFailed
 
@@ -11,6 +13,10 @@ public enum FilmRendererError: LocalizedError {
         switch self {
         case .kernelCompilationFailed(let name):
             "Filmify could not compile its \(name) image kernel."
+        case .filmStockUnavailable(let name):
+            "Filmify could not load the \(name) color stock."
+        case .filmStockMalformed(let name):
+            "The bundled \(name) color stock is not a valid 3D LUT."
         case .imageLoadFailed(let url):
             "Filmify could not open \(url.lastPathComponent)."
         case .renderFailed:
@@ -20,12 +26,26 @@ public enum FilmRendererError: LocalizedError {
 }
 
 public final class FilmRenderer: @unchecked Sendable {
+    private let toneKernel: CIColorKernel
+    private let stockInputKernel: CIColorKernel
+    private let stockOutputKernel: CIColorKernel
     private let lightShapingKernel: CIColorKernel
     private let diffusionKernel: CIColorKernel
     private let halationKernel: CIColorKernel
     private let grainKernel: CIColorKernel
+    private let stockCubeLock = NSLock()
+    private var stockCubes: [FilmStockID: FilmStockCube] = [:]
 
     public init() throws {
+        guard let toneKernel = CIColorKernel(source: Self.toneSource) else {
+            throw FilmRendererError.kernelCompilationFailed("film-tone")
+        }
+        guard let stockInputKernel = CIColorKernel(source: Self.stockInputSource) else {
+            throw FilmRendererError.kernelCompilationFailed("color-stock input")
+        }
+        guard let stockOutputKernel = CIColorKernel(source: Self.stockOutputSource) else {
+            throw FilmRendererError.kernelCompilationFailed("color-stock output")
+        }
         guard let lightShapingKernel = CIColorKernel(source: Self.lightShapingSource) else {
             throw FilmRendererError.kernelCompilationFailed("light-shaping")
         }
@@ -39,6 +59,9 @@ public final class FilmRenderer: @unchecked Sendable {
             throw FilmRendererError.kernelCompilationFailed("grain")
         }
 
+        self.toneKernel = toneKernel
+        self.stockInputKernel = stockInputKernel
+        self.stockOutputKernel = stockOutputKernel
         self.lightShapingKernel = lightShapingKernel
         self.diffusionKernel = diffusionKernel
         self.halationKernel = halationKernel
@@ -62,6 +85,14 @@ public final class FilmRenderer: @unchecked Sendable {
 
         var image = source
 
+        if recipe.tone.isEnabled, recipe.tone.hasToneAdjustments {
+            image = try applyTone(image, settings: recipe.tone, extent: extent)
+        }
+        if recipe.tone.isEnabled,
+           recipe.tone.stock != .none,
+           recipe.tone.stockAmount > 0 {
+            image = try applyFilmStock(image, settings: recipe.tone, extent: extent)
+        }
         if recipe.lightShaping.isEnabled, recipe.lightShaping.amountStops != 0 {
             image = try applyLightShaping(image, settings: recipe.lightShaping, extent: extent)
         }
@@ -76,6 +107,70 @@ public final class FilmRenderer: @unchecked Sendable {
         }
 
         return image.cropped(to: extent)
+    }
+
+    private func applyTone(
+        _ image: CIImage,
+        settings: FilmToneSettings,
+        extent: CGRect
+    ) throws -> CIImage {
+        let arguments: [Any] = [
+            image,
+            Float(max(-2, min(2, settings.exposure))),
+            Float(max(-1, min(1, settings.contrast))),
+            Float(max(-1, min(1, settings.saturation))),
+            Float(max(-1, min(1, settings.vibrance))),
+            Float(max(-1, min(1, settings.warmth)))
+        ]
+        guard let output = toneKernel.apply(extent: extent, arguments: arguments) else {
+            throw FilmRendererError.renderFailed
+        }
+        return output
+    }
+
+    private func applyFilmStock(
+        _ image: CIImage,
+        settings: FilmToneSettings,
+        extent: CGRect
+    ) throws -> CIImage {
+        let cube = try stockCube(for: settings.stock)
+        guard let input = stockInputKernel.apply(extent: extent, arguments: [image]) else {
+            throw FilmRendererError.renderFailed
+        }
+
+        guard let filter = CIFilter(name: "CIColorCube") else {
+            throw FilmRendererError.renderFailed
+        }
+        filter.setValue(input, forKey: kCIInputImageKey)
+        filter.setValue(cube.dimension, forKey: "inputCubeDimension")
+        filter.setValue(cube.data, forKey: "inputCubeData")
+        guard let graded = filter.outputImage?.cropped(to: extent) else {
+            throw FilmRendererError.renderFailed
+        }
+
+        let amount = Float(max(0, min(FilmToneSettings.maximumStockAmount, settings.stockAmount)))
+        guard let output = stockOutputKernel.apply(
+            extent: extent,
+            arguments: [image, graded, amount]
+        ) else {
+            throw FilmRendererError.renderFailed
+        }
+        return output
+    }
+
+    private func stockCube(for stock: FilmStockID) throws -> FilmStockCube {
+        stockCubeLock.lock()
+        if let cached = stockCubes[stock] {
+            stockCubeLock.unlock()
+            return cached
+        }
+        stockCubeLock.unlock()
+
+        let loaded = try FilmStockLUTLoader.load(stock)
+        stockCubeLock.lock()
+        stockCubes[stock] = loaded
+        stockCubeLock.unlock()
+        return loaded
     }
 
     private func applyLightShaping(
@@ -254,6 +349,262 @@ public final class FilmRenderer: @unchecked Sendable {
 }
 
 private extension FilmRenderer {
+    static let stockInputSource = #"""
+    float srgbEncode(float value) {
+        float linear = max(value, 0.0);
+        return linear <= 0.0031308
+            ? linear * 12.92
+            : 1.055 * pow(linear, 1.0 / 2.4) - 0.055;
+    }
+
+    kernel vec4 prepareFilmStock(__sample pixel) {
+        vec3 rec2020 = max(pixel.rgb, vec3(0.0));
+        vec3 rgb = vec3(
+            1.6604910 * rec2020.r - 0.5876411 * rec2020.g - 0.0728499 * rec2020.b,
+            -0.1245505 * rec2020.r + 1.1328999 * rec2020.g - 0.0083494 * rec2020.b,
+            -0.0181508 * rec2020.r - 0.1005789 * rec2020.g + 1.1187297 * rec2020.b
+        );
+
+        // The spectral cubes describe display-referred sRGB. Compress wide-gamut
+        // excursions toward neutral before lookup instead of clipping individual
+        // channels, which would create hard, synthetic hue changes.
+        float y = max(dot(rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0);
+        if (y > 0.82) {
+            float rolledY = 0.82 + 0.18 * (1.0 - exp(-(y - 0.82) / 0.18));
+            rgb *= rolledY / max(y, 0.000001);
+            y = rolledY;
+        }
+        float minimum = min(rgb.r, min(rgb.g, rgb.b));
+        float maximum = max(rgb.r, max(rgb.g, rgb.b));
+        float lowScale = minimum < 0.0 ? y / max(y - minimum, 0.000001) : 1.0;
+        float highScale = maximum > 1.0
+            ? (1.0 - y) / max(maximum - y, 0.000001)
+            : 1.0;
+        rgb = mix(vec3(y), rgb, clamp(min(lowScale, highScale), 0.0, 1.0));
+
+        return vec4(
+            srgbEncode(rgb.r),
+            srgbEncode(rgb.g),
+            srgbEncode(rgb.b),
+            pixel.a
+        );
+    }
+    """#
+
+    static let stockOutputSource = #"""
+    float srgbDecode(float value) {
+        float encoded = max(value, 0.0);
+        return encoded <= 0.04045
+            ? encoded / 12.92
+            : pow((encoded + 0.055) / 1.055, 2.4);
+    }
+
+    kernel vec4 finishFilmStock(__sample source, __sample graded, float amount) {
+        vec3 srgb = vec3(
+            srgbDecode(graded.r),
+            srgbDecode(graded.g),
+            srgbDecode(graded.b)
+        );
+        vec3 rec2020 = vec3(
+            0.6274039 * srgb.r + 0.3292830 * srgb.g + 0.0433131 * srgb.b,
+            0.0690973 * srgb.r + 0.9195404 * srgb.g + 0.0113623 * srgb.b,
+            0.0163914 * srgb.r + 0.0880133 * srgb.g + 0.8955953 * srgb.b
+        );
+        const vec3 luma = vec3(0.2627002, 0.6779981, 0.0593017);
+        vec3 positiveGrade = max(rec2020, vec3(0.0));
+        float sourceY = max(dot(source.rgb, luma), 0.0);
+        float gradedY = max(dot(positiveGrade, luma), 0.000001);
+
+        // These spectral cubes include a complete negative-to-print density
+        // response, but Color Stock is intended to supply color character rather
+        // than replace Filmify's tone controls. Keep only a restrained fraction
+        // of the cube's luminance move while preserving its chromatic signature.
+        float restrainedY = mix(sourceY, gradedY, 0.20);
+        vec3 colorGrade = positiveGrade * (restrainedY / gradedY);
+        vec3 rgb = mix(
+            source.rgb,
+            colorGrade,
+            clamp(amount, 0.0, 2.0)
+        );
+        return vec4(rgb, source.a);
+    }
+    """#
+
+    static let toneSource = #"""
+    float filmShoulder(float value) {
+        float a = 0.15;
+        float b = 0.50;
+        float c = 0.10;
+        float d = 0.20;
+        float e = 0.02;
+        float f = 0.30;
+        return ((value * (a * value + c * b) + d * e)
+            / (value * (a * value + b) + d * f)) - e / f;
+    }
+
+    float outputShoulder(float value, float knee) {
+        float width = max(1.0 - knee, 0.0001);
+        float over = max(value - knee, 0.0);
+        float rolled = knee + width * (1.0 - exp(-over / width));
+        return value > knee ? rolled : value;
+    }
+
+    vec3 rec2020ToOklab(vec3 rgb) {
+        float x = 0.6369580 * rgb.r + 0.1446169 * rgb.g + 0.1688809 * rgb.b;
+        float y = 0.2627002 * rgb.r + 0.6779981 * rgb.g + 0.0593017 * rgb.b;
+        float z =                         0.0280727 * rgb.g + 1.0609851 * rgb.b;
+
+        float l = 0.8190224 * x + 0.3619063 * y - 0.1288738 * z;
+        float m = 0.0329837 * x + 0.9292868 * y + 0.0361447 * z;
+        float s = 0.0481772 * x + 0.2642395 * y + 0.6335478 * z;
+        float lRoot = pow(max(l, 0.0), 0.3333333);
+        float mRoot = pow(max(m, 0.0), 0.3333333);
+        float sRoot = pow(max(s, 0.0), 0.3333333);
+
+        return vec3(
+            0.2104543 * lRoot + 0.7936178 * mRoot - 0.0040720 * sRoot,
+            1.9780000 * lRoot - 2.4285922 * mRoot + 0.4505937 * sRoot,
+            0.0259040 * lRoot + 0.7827718 * mRoot - 0.8086758 * sRoot
+        );
+    }
+
+    vec3 oklabToRec2020(vec3 lab) {
+        float lRoot = lab.x + 0.3963378 * lab.y + 0.2158038 * lab.z;
+        float mRoot = lab.x - 0.1055613 * lab.y - 0.0638542 * lab.z;
+        float sRoot = lab.x - 0.0894842 * lab.y - 1.2914855 * lab.z;
+        float l = lRoot * lRoot * lRoot;
+        float m = mRoot * mRoot * mRoot;
+        float s = sRoot * sRoot * sRoot;
+
+        float x = 1.2268799 * l - 0.5578150 * m + 0.2813911 * s;
+        float y = -0.0405757 * l + 1.1122868 * m - 0.0717111 * s;
+        float z = -0.0763729 * l - 0.4214933 * m + 1.5869240 * s;
+
+        return vec3(
+            1.7166512 * x - 0.3556708 * y - 0.2533663 * z,
+            -0.6666844 * x + 1.6164812 * y + 0.0157685 * z,
+            0.0176399 * x - 0.0427706 * y + 0.9421031 * z
+        );
+    }
+
+    kernel vec4 filmTone(__sample pixel, float exposure, float contrast, float saturation, float vibrance, float warmth) {
+        const vec3 luma = vec3(0.2627002, 0.6779981, 0.0593017);
+        vec3 source = max(pixel.rgb, vec3(0.0));
+        float sourceY = max(dot(source, luma), 0.000001);
+
+        // Exposure uses a bounded photographic density curve. The family composes
+        // cleanly around fixed black and white points: +1 EV gives deep tones about
+        // three times their input density, then progressively reduces that gain
+        // through the mids and highlights. This matches the response of modern raw
+        // editors much more closely than multiplying RGB and applying a late knee.
+        float densityGain = pow(3.05, exposure);
+        float exposedY = sourceY * densityGain
+            / max(1.0 + (densityGain - 1.0) * sourceY, 0.000001);
+        float adjustedStops = log2(max(exposedY, 0.000001) / 0.18);
+
+        // Contrast is an S-curve around 18% gray. A bounded soft-sign curve limits
+        // toward both endpoints instead of driving highlights and shadows into clips.
+        float contrastPosition = adjustedStops * 0.62;
+        float contrastCurve = contrastPosition / (1.0 + abs(contrastPosition));
+        adjustedStops += contrast * 1.15 * contrastCurve;
+        float adjustedY = 0.18 * exp2(adjustedStops);
+
+        // Contrast adds a normalized film response without making exposure itself
+        // collide with a second shoulder.
+        float filmY = filmShoulder(adjustedY)
+            * (0.18 / max(filmShoulder(0.18), 0.000001));
+        float rolloff = clamp(abs(contrast) * 0.23, 0.0, 0.36);
+        adjustedY = mix(adjustedY, filmY, rolloff);
+
+        // Retain a hair of printable separation below display white at positive
+        // exposure instead of letting the last highlight values quantize together.
+        adjustedY -= 0.0035
+            * clamp(max(exposure, 0.0), 0.0, 1.0)
+            * smoothstep(0.85, 1.0, adjustedY);
+
+        // SDR source values remain below white by construction. Compress only
+        // genuinely extended input rather than flattening ordinary upper mids.
+        adjustedY = adjustedY > 1.0
+            ? 0.995
+            : adjustedY;
+        vec3 rgb = source * (adjustedY / sourceY);
+
+        // Saturation and Vibrance live in OKLab so equal slider moves feel much more
+        // even across hues. Vibrance favors restrained colors, protects skin-like
+        // orange hues, and eases off in the brightest part of the image.
+        vec3 lab = rec2020ToOklab(max(rgb, vec3(0.0)));
+        float chroma = length(lab.yz);
+
+        // Raising exposure on photographic material does not preserve electronic
+        // RGB saturation all the way to white. Compress dye separation gradually
+        // through the raised mids, then more firmly in the shoulder. At +1 EV this
+        // is calibrated against a Lightroom reference; the user's Saturation and
+        // Vibrance controls remain available afterward for intentional color moves.
+        float exposureColorWeight = clamp(max(exposure, 0.0), 0.0, 1.0);
+        float raisedMidCompression = smoothstep(0.10, 0.75, adjustedY);
+        float shoulderCompression = smoothstep(0.75, 0.98, adjustedY);
+        float exposureChromaScale = 1.0 - exposureColorWeight
+            * (0.45 * raisedMidCompression + 0.18 * shoulderCompression);
+        lab.yz *= max(0.30, exposureChromaScale);
+
+        float saturationScale = saturation >= 0.0
+            ? 1.0 + saturation * 1.35
+            : 1.0 + saturation;
+        lab.yz *= saturationScale;
+
+        float directionLength = max(length(lab.yz), 0.000001);
+        vec2 hueDirection = lab.yz / directionLength;
+        float skinDirection = clamp(dot(hueDirection, normalize(vec2(0.78, 0.62))), 0.0, 1.0);
+        float skinProtection = smoothstep(0.70, 0.94, skinDirection)
+            * smoothstep(0.008, 0.055, chroma)
+            * (1.0 - smoothstep(0.25, 0.38, chroma));
+        float chromaProtection = smoothstep(0.035, 0.28, chroma);
+        float highlightProtection = 1.0 - 0.35 * smoothstep(0.72, 1.08, lab.x);
+        float vibranceScale = vibrance >= 0.0
+            ? 1.0 + vibrance * 1.25 * (1.0 - chromaProtection)
+                * (1.0 - 0.92 * skinProtection) * highlightProtection
+            : exp2(vibrance * 1.05);
+        lab.yz *= max(0.0, vibranceScale);
+
+        // Warmth leans toward a Kodak Gold-like palette: yellow-gold density through
+        // the mids and highlights, with cleaner, less-red shadow color separation.
+        float highlightTone = smoothstep(0.42, 0.96, lab.x);
+        float shadowTone = 1.0 - smoothstep(0.08, 0.46, lab.x);
+        float midtoneTone = smoothstep(0.16, 0.52, lab.x)
+            * (1.0 - smoothstep(0.68, 1.02, lab.x));
+        lab.y += warmth * (0.007 + 0.006 * midtoneTone
+            + 0.004 * highlightTone - 0.006 * shadowTone);
+        lab.z += warmth * (0.027 + 0.021 * midtoneTone
+            + 0.022 * highlightTone - 0.014 * shadowTone);
+
+        // A small density response keeps newly saturated colors rich rather than
+        // electronic, then pulls out-of-gamut negative channels toward neutral.
+        float colorIncrease = max(0.0, saturationScale * vibranceScale - 1.0);
+        lab.x -= min(0.012, colorIncrease * min(chroma, 0.25) * 0.05);
+        rgb = oklabToRec2020(lab);
+        float y = max(dot(rgb, luma), 0.000001);
+        float minimum = min(rgb.r, min(rgb.g, rgb.b));
+        float gamutScale = minimum < 0.0 ? y / max(y - minimum, 0.000001) : 1.0;
+        rgb = max(vec3(0.0), mix(vec3(y), rgb, clamp(gamutScale, 0.0, 1.0)));
+
+        // As luminance enters the shoulder, compress only the chroma that no longer
+        // fits below display white. This gives film-like highlight desaturation and
+        // prevents one channel from clipping early and producing a colored edge.
+        float maximum = max(rgb.r, max(rgb.g, rgb.b));
+        float colorExcursion = max(maximum - y, 0.0);
+        float availableExcursion = max(1.0 - y, 0.0);
+        float highlightGamutScale = colorExcursion > availableExcursion
+            ? availableExcursion / max(colorExcursion, 0.000001)
+            : 1.0;
+        rgb = mix(vec3(y), rgb, clamp(highlightGamutScale, 0.0, 1.0));
+        if (sourceY > 1.0) {
+            rgb = min(rgb, vec3(0.99));
+        }
+
+        return vec4(rgb, pixel.a);
+    }
+    """#
+
     static let lightShapingSource = #"""
     kernel vec4 lightShape(__sample pixel, vec4 extent, float amount, float focus, float pop, float bias, float roundness, vec2 center) {
         vec2 uv = (destCoord() - extent.xy) / extent.zw;

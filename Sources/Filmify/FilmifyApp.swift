@@ -75,7 +75,7 @@ struct FilmifyDesktopApp: App {
 
                 Divider()
 
-                Button("Save Current as Recipe…") {
+                Button("Save New Recipe…") {
                     model.saveCurrentAsRecipe()
                 }
                 .disabled(model.operationMode != .edit)
@@ -88,7 +88,7 @@ struct FilmifyDesktopApp: App {
                     Button("Update Current Recipe") {
                         model.updateSelectedRecipe()
                     }
-                    Button("Delete Current Recipe", role: .destructive) {
+                    Button("Delete Current Recipe…", role: .destructive) {
                         model.deleteSelectedRecipe()
                     }
                 }

@@ -15,8 +15,11 @@ struct DropModeView: View {
                 VStack(spacing: 4) {
                     Text("Drop images to Filmify")
                         .font(.title2.weight(.semibold))
-                    Text("They’ll be processed immediately with \(model.recipe.name).")
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text("They’ll be processed immediately with")
+                            .foregroundStyle(.secondary)
+                        RecipeMenu(showsRecipeName: true)
+                    }
                 }
 
                 Button("Choose Images…") {
@@ -25,9 +28,6 @@ struct DropModeView: View {
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
 
-                Text("JPEG · HEIC · PNG · TIFF")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(32)
@@ -90,6 +90,7 @@ private struct DropletStatusBar: View {
 }
 
 struct CompactJobStatus: View {
+    @Environment(AppModel.self) private var model
     let job: ProcessingJob
 
     var body: some View {
@@ -106,8 +107,21 @@ struct CompactJobStatus: View {
             }
             Text(job.sourceURL.lastPathComponent)
                 .lineLimit(1)
-            Text(job.state.label)
-                .foregroundStyle(.secondary)
+            switch job.state {
+            case .finished(let outputURL):
+                Button {
+                    model.reveal(outputURL)
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .accessibilityLabel("Show in Finder")
+                .help("Show in Finder")
+            default:
+                Text(job.state.label)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

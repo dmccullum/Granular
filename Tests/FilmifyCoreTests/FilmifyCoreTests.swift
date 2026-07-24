@@ -9,6 +9,7 @@ import Testing
 
     for recipe in FilmRecipe.builtIns {
         #expect((0 ... 1).contains(recipe.strength))
+        #expect(recipe.tone == FilmToneSettings(isEnabled: false))
         #expect((0 ... 1).contains(recipe.lightShaping.amountStops))
         #expect((0 ... 1).contains(recipe.diffusion.amount))
         #expect((0 ... 1).contains(recipe.halation.amount))
@@ -16,6 +17,150 @@ import Testing
         #expect(recipe.grain.particleSizeMicrons > 0)
         #expect(recipe.grain.virtualGateWidthMillimeters > 0)
     }
+}
+
+@Test func filmToneScalesWithRecipeStrength() {
+    var recipe = FilmRecipe.classic35
+    recipe.strength = 0.5
+    recipe.tone = .init(
+        stock: .portra400,
+        stockAmount: 0.8,
+        exposure: 1,
+        contrast: 0.6,
+        saturation: -0.4,
+        vibrance: 0.8,
+        warmth: 0.2
+    )
+    let effective = recipe.effective
+
+    #expect(effective.tone.exposure == 0.5)
+    #expect(effective.tone.stock == .portra400)
+    #expect(effective.tone.stockAmount == 0.4)
+    #expect(effective.tone.contrast == 0.3)
+    #expect(effective.tone.saturation == -0.2)
+    #expect(effective.tone.vibrance == 0.4)
+    #expect(effective.tone.warmth == 0.1)
+}
+
+@Test func recipesSavedBeforeColorStocksDecodeWithNeutralStockDefaults() throws {
+    let encoded = try JSONEncoder().encode(FilmRecipe.classic35)
+    var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+    var tone = try #require(object["tone"] as? [String: Any])
+    tone.removeValue(forKey: "stock")
+    tone.removeValue(forKey: "stockAmount")
+    object["tone"] = tone
+    let legacyData = try JSONSerialization.data(withJSONObject: object)
+    let decoded = try JSONDecoder().decode(FilmRecipe.self, from: legacyData)
+
+    #expect(decoded.tone.stock == .none)
+    #expect(decoded.tone.stockAmount == 1)
+}
+
+@Test func allNamedColorStocksLoadAsCoreImageCubes() throws {
+    for stock in FilmStockID.allCases where stock != .none {
+        let cube = try FilmStockLUTLoader.load(stock)
+        #expect(cube.dimension == 33)
+        #expect(cube.data.count == 33 * 33 * 33 * 4 * MemoryLayout<Float>.size)
+    }
+}
+
+@Test func colorStockAmountIsNeutralAtZeroAndDistinctAtFullStrength() throws {
+    let renderer = try FilmRenderer()
+    let extent = CGRect(x: 0, y: 0, width: 8, height: 8)
+    let source = CIImage(color: .init(red: 0.42, green: 0.24, blue: 0.10, alpha: 1))
+        .cropped(to: extent)
+    var recipe = FilmRecipe(
+        id: "stock-test",
+        name: "Stock Test",
+        tone: .init(stock: .portra400, stockAmount: 0),
+        lightShaping: .init(isEnabled: false),
+        diffusion: .init(isEnabled: false),
+        halation: .init(isEnabled: false),
+        grain: .init(isEnabled: false)
+    )
+
+    let sourcePixels = renderFloatPixels(source, extent: extent)
+    let neutralPixels = renderFloatPixels(try renderer.render(source, recipe: recipe), extent: extent)
+    #expect(abs(sourcePixels[0] - neutralPixels[0]) < 0.000_001)
+    #expect(abs(sourcePixels[1] - neutralPixels[1]) < 0.000_001)
+    #expect(abs(sourcePixels[2] - neutralPixels[2]) < 0.000_001)
+
+    recipe.tone.stockAmount = 1
+    let portraPixels = renderFloatPixels(try renderer.render(source, recipe: recipe), extent: extent)
+    recipe.tone.stockAmount = 2
+    let overcookedPortraPixels = renderFloatPixels(
+        try renderer.render(source, recipe: recipe),
+        extent: extent
+    )
+    recipe.tone.stock = .ektar100
+    recipe.tone.stockAmount = 1
+    let ektarPixels = renderFloatPixels(try renderer.render(source, recipe: recipe), extent: extent)
+
+    #expect(colorDistance(sourcePixels, portraPixels) > 0.01)
+    #expect(
+        colorDistance(sourcePixels, overcookedPortraPixels)
+            > colorDistance(sourcePixels, portraPixels) * 1.5
+    )
+    #expect(colorDistance(portraPixels, ektarPixels) > 0.0075)
+}
+
+@Test func colorStockAmountDefaultsToOneWithAnOvercookMaximumOfTwo() {
+    #expect(FilmToneSettings().stockAmount == 1)
+    #expect(FilmToneSettings.maximumStockAmount == 2)
+}
+
+@Test func removedColorStocksMigrateWithoutBreakingSavedRecipes() throws {
+    let decoder = JSONDecoder()
+    let removedVelvia = try decoder.decode(FilmStockID.self, from: Data(#""velvia50""#.utf8))
+    let duplicateVision = try decoder.decode(FilmStockID.self, from: Data(#""vision500T""#.utf8))
+
+    #expect(removedVelvia == .none)
+    #expect(duplicateVision == .vision250D)
+}
+
+@Test func colorStocksRetainColorWithoutImposingASecondStrongContrastCurve() throws {
+    let renderer = try FilmRenderer()
+    let extent = CGRect(x: 0, y: 0, width: 8, height: 8)
+    let lowSource = CIImage(color: .init(red: 0.12, green: 0.12, blue: 0.12, alpha: 1))
+        .cropped(to: extent)
+    let highSource = CIImage(color: .init(red: 0.68, green: 0.68, blue: 0.68, alpha: 1))
+        .cropped(to: extent)
+    let sourceContrast = Float(0.68 - 0.12)
+
+    for stock in FilmStockID.allCases where stock != .none {
+        let recipe = FilmRecipe(
+            id: "stock-contrast-\(stock.rawValue)",
+            name: "Stock Contrast",
+            tone: .init(stock: stock),
+            lightShaping: .init(isEnabled: false),
+            diffusion: .init(isEnabled: false),
+            halation: .init(isEnabled: false),
+            grain: .init(isEnabled: false)
+        )
+        let low = renderFloatPixels(
+            try renderer.render(lowSource, recipe: recipe),
+            extent: extent
+        )
+        let high = renderFloatPixels(
+            try renderer.render(highSource, recipe: recipe),
+            extent: extent
+        )
+        let outputContrast = pixelLuminance(high) - pixelLuminance(low)
+
+        #expect(outputContrast > sourceContrast * 0.70)
+        #expect(outputContrast < sourceContrast * 1.20)
+    }
+}
+
+@Test func recipesSavedBeforeFilmToneDecodeWithNeutralDefaults() throws {
+    let encoded = try JSONEncoder().encode(FilmRecipe.classic35)
+    var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+    object.removeValue(forKey: "tone")
+    let legacyData = try JSONSerialization.data(withJSONObject: object)
+    let decoded = try JSONDecoder().decode(FilmRecipe.self, from: legacyData)
+
+    #expect(decoded.tone == FilmToneSettings())
+    #expect(decoded.lightShaping == FilmRecipe.classic35.lightShaping)
 }
 
 @Test func strengthScalesEffectAmountsWithoutChangingCharacterControls() {
@@ -36,7 +181,7 @@ import Testing
     #expect(recipe.lightShaping.amountStops == 0.25)
     #expect(recipe.diffusion.amount == 0.10)
     #expect(recipe.halation.amount == 0.25)
-    #expect(recipe.grain.amount == 0.30)
+    #expect(recipe.grain.amount == 0.25)
     #expect(recipe.grain.particleSizeMicrons == 10)
 }
 
@@ -59,7 +204,7 @@ import Testing
     #expect(FilmRenderer.mappedSpotlightAmount(recipe.lightShaping.amountStops) == 1.0)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.diffusion.amount) == 0.20)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.halation.amount) == 0.50)
-    #expect(abs(FilmRenderer.mappedGrainAmount(recipe.grain.amount) - 1.80) < 0.000_001)
+    #expect(FilmRenderer.mappedGrainAmount(recipe.grain.amount) == 1.50)
 }
 
 @Test func halationUsesNormalizedAmountsWithoutChangingRecipeStrengths() throws {
@@ -204,7 +349,10 @@ import Testing
     )
 
     #expect(abs(fit - 0.238) < 0.000_001)
-    #expect(ViewerZoomMath.zoomedIn(from: 1) == 1.25)
+    #expect(ViewerZoomMath.zoomedIn(from: fit) == 0.25)
+    #expect(ViewerZoomMath.zoomedOut(from: fit) == 0.125)
+    #expect(ViewerZoomMath.zoomedIn(from: 1) == 2)
+    #expect(ViewerZoomMath.zoomedOut(from: 1) == 0.5)
     #expect(ViewerZoomMath.zoomedOut(from: 1.25) == 1)
 }
 
@@ -242,6 +390,140 @@ import Testing
     let output = try renderer.render(source, recipe: .classic35)
 
     #expect(output.extent == source.extent)
+}
+
+@Test func filmToneExposureProtectsTheHighlightShoulder() throws {
+    let renderer = try FilmRenderer()
+    let extent = CGRect(x: 0, y: 0, width: 8, height: 8)
+    let recipe = FilmRecipe(
+        id: "tone-test",
+        name: "Tone Test",
+        tone: .init(exposure: 1),
+        lightShaping: .init(isEnabled: false),
+        diffusion: .init(isEnabled: false),
+        halation: .init(isEnabled: false),
+        grain: .init(isEnabled: false)
+    )
+    let middleSource = CIImage(color: .init(red: 0.18, green: 0.18, blue: 0.18, alpha: 1))
+        .cropped(to: extent)
+    let highlightSource = CIImage(color: .init(red: 0.9, green: 0.9, blue: 0.9, alpha: 1))
+        .cropped(to: extent)
+    let extendedHighlightSource = CIImage(color: .init(red: 2, green: 2, blue: 2, alpha: 1))
+        .cropped(to: extent)
+
+    let middle = Double(renderFloatPixels(try renderer.render(middleSource, recipe: recipe), extent: extent)[0])
+    let highlight = Double(renderFloatPixels(try renderer.render(highlightSource, recipe: recipe), extent: extent)[0])
+    let extendedHighlight = Double(
+        renderFloatPixels(try renderer.render(extendedHighlightSource, recipe: recipe), extent: extent)[0]
+    )
+
+    #expect(middle > 0.18)
+    #expect(middle > 0.38)
+    #expect(middle < 0.43)
+    #expect(highlight > 0.9)
+    #expect(highlight > 0.95)
+    #expect(highlight < 1)
+    #expect(extendedHighlight > highlight)
+    #expect(extendedHighlight < 1)
+    #expect(middle / 0.18 > highlight / 0.9)
+}
+
+@Test func positiveExposureCompressesColorAsItApproachesTheShoulder() throws {
+    let renderer = try FilmRenderer()
+    let extent = CGRect(x: 0, y: 0, width: 8, height: 8)
+    let recipe = FilmRecipe(
+        id: "exposure-color-test",
+        name: "Exposure Color Test",
+        tone: .init(exposure: 1),
+        lightShaping: .init(isEnabled: false),
+        diffusion: .init(isEnabled: false),
+        halation: .init(isEnabled: false),
+        grain: .init(isEnabled: false)
+    )
+    let middleSource = CIImage(color: .init(red: 0.30, green: 0.16, blue: 0.08, alpha: 1))
+        .cropped(to: extent)
+    let highlightSource = CIImage(color: .init(red: 0.92, green: 0.58, blue: 0.32, alpha: 1))
+        .cropped(to: extent)
+
+    let middleInput = renderFloatPixels(middleSource, extent: extent)
+    let highlightInput = renderFloatPixels(highlightSource, extent: extent)
+    let middleOutput = renderFloatPixels(
+        try renderer.render(middleSource, recipe: recipe),
+        extent: extent
+    )
+    let highlightOutput = renderFloatPixels(
+        try renderer.render(highlightSource, recipe: recipe),
+        extent: extent
+    )
+
+    let middleRetention = normalizedChroma(middleOutput) / normalizedChroma(middleInput)
+    let highlightRetention = normalizedChroma(highlightOutput) / normalizedChroma(highlightInput)
+    #expect(middleRetention < 1)
+    #expect(highlightRetention < middleRetention)
+}
+
+@Test func filmToneSaturationAndWarmthRemainPhotographic() throws {
+    let renderer = try FilmRenderer()
+    let extent = CGRect(x: 0, y: 0, width: 8, height: 8)
+    let source = CIImage(color: .init(red: 0.52, green: 0.28, blue: 0.12, alpha: 1))
+        .cropped(to: extent)
+    var recipe = FilmRecipe(
+        id: "color-tone-test",
+        name: "Color Tone Test",
+        tone: .init(saturation: -1),
+        lightShaping: .init(isEnabled: false),
+        diffusion: .init(isEnabled: false),
+        halation: .init(isEnabled: false),
+        grain: .init(isEnabled: false)
+    )
+
+    let monochrome = renderFloatPixels(try renderer.render(source, recipe: recipe), extent: extent)
+    #expect(abs(monochrome[0] - monochrome[1]) < 0.001)
+    #expect(abs(monochrome[1] - monochrome[2]) < 0.001)
+
+    recipe.tone = .init(warmth: 1)
+    let neutralSource = CIImage(color: .init(red: 0.35, green: 0.35, blue: 0.35, alpha: 1))
+        .cropped(to: extent)
+    let warmed = renderFloatPixels(try renderer.render(neutralSource, recipe: recipe), extent: extent)
+    #expect(warmed[0] > warmed[2])
+    #expect(warmed[1] > warmed[2])
+    let warmedLuminance = 0.2627002 * warmed[0] + 0.6779981 * warmed[1] + 0.0593017 * warmed[2]
+    #expect(abs(warmedLuminance - 0.35) < 0.04)
+}
+
+@Test func filmToneVibranceProtectsSkinLikeHues() throws {
+    let renderer = try FilmRenderer()
+    let extent = CGRect(x: 0, y: 0, width: 8, height: 8)
+    let recipe = FilmRecipe(
+        id: "vibrance-test",
+        name: "Vibrance Test",
+        tone: .init(vibrance: 1),
+        lightShaping: .init(isEnabled: false),
+        diffusion: .init(isEnabled: false),
+        halation: .init(isEnabled: false),
+        grain: .init(isEnabled: false)
+    )
+    let skinColor = [Float(0.38), 0.28, 0.23]
+    let foliageColor = [Float(0.25), 0.34, 0.22]
+    let skinSource = CIImage(color: .init(
+        red: CGFloat(skinColor[0]),
+        green: CGFloat(skinColor[1]),
+        blue: CGFloat(skinColor[2]),
+        alpha: 1
+    )).cropped(to: extent)
+    let foliageSource = CIImage(color: .init(
+        red: CGFloat(foliageColor[0]),
+        green: CGFloat(foliageColor[1]),
+        blue: CGFloat(foliageColor[2]),
+        alpha: 1
+    )).cropped(to: extent)
+
+    let skin = renderFloatPixels(try renderer.render(skinSource, recipe: recipe), extent: extent)
+    let foliage = renderFloatPixels(try renderer.render(foliageSource, recipe: recipe), extent: extent)
+    let skinBoost = channelSpread(skin) / channelSpread(skinColor)
+    let foliageBoost = channelSpread(foliage) / channelSpread(foliageColor)
+
+    #expect(skinBoost < foliageBoost)
 }
 
 @Test func diffusionCreatesStrongControlledHighlightSpill() throws {
@@ -430,6 +712,34 @@ private func grainTestRecipe(chroma: Double) -> FilmRecipe {
             seed: 1234
         )
     )
+}
+
+private func channelSpread(_ pixels: [Float]) -> Float {
+    guard pixels.count >= 3 else { return 0 }
+    return max(pixels[0], max(pixels[1], pixels[2]))
+        - min(pixels[0], min(pixels[1], pixels[2]))
+}
+
+private func colorDistance(_ lhs: [Float], _ rhs: [Float]) -> Float {
+    guard lhs.count >= 3, rhs.count >= 3 else { return 0 }
+    let red = lhs[0] - rhs[0]
+    let green = lhs[1] - rhs[1]
+    let blue = lhs[2] - rhs[2]
+    return sqrt(red * red + green * green + blue * blue)
+}
+
+private func normalizedChroma(_ pixels: [Float]) -> Float {
+    guard pixels.count >= 3 else { return 0 }
+    let luminance = max(
+        0.000_001,
+        0.2126 * pixels[0] + 0.7152 * pixels[1] + 0.0722 * pixels[2]
+    )
+    return channelSpread(pixels) / luminance
+}
+
+private func pixelLuminance(_ pixels: [Float]) -> Float {
+    guard pixels.count >= 3 else { return 0 }
+    return 0.2627002 * pixels[0] + 0.6779981 * pixels[1] + 0.0593017 * pixels[2]
 }
 
 private func meanChromaEnergy(_ pixels: [Float]) -> Double {

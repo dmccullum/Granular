@@ -3,7 +3,23 @@ import Foundation
 public enum ViewerZoomMath {
     public static let minimumScale = 0.01
     public static let maximumScale = 8.0
-    public static let stepFactor = 1.25
+
+    // Actual-size landmarks. These are powers of two around 100%, so the
+    // buttons and keyboard commands always land on useful, predictable scales
+    // regardless of the image's current Fit percentage.
+    private static let zoomStops = [
+        minimumScale,
+        0.015625,
+        0.03125,
+        0.0625,
+        0.125,
+        0.25,
+        0.5,
+        1,
+        2,
+        4,
+        maximumScale
+    ]
 
     public static func fitScale(
         imageWidth: Double,
@@ -19,11 +35,15 @@ public enum ViewerZoomMath {
     }
 
     public static func zoomedIn(from scale: Double) -> Double {
-        clampedScale(scale * stepFactor)
+        let current = clampedScale(scale)
+        let tolerance = max(0.000_001, current * 0.000_001)
+        return zoomStops.first { $0 > current + tolerance } ?? maximumScale
     }
 
     public static func zoomedOut(from scale: Double) -> Double {
-        clampedScale(scale / stepFactor)
+        let current = clampedScale(scale)
+        let tolerance = max(0.000_001, current * 0.000_001)
+        return zoomStops.last { $0 < current - tolerance } ?? minimumScale
     }
 
     public static func clampedScale(_ scale: Double) -> Double {

@@ -14,7 +14,10 @@ let package = Package(
     targets: [
         .target(
             name: "FilmifyCore",
-            path: "Sources/FilmifyCore"
+            path: "Sources/FilmifyCore",
+            resources: [
+                .copy("FilmStocks")
+            ]
         ),
         .executableTarget(
             name: "Filmify",

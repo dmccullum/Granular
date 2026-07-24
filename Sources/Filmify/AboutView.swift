@@ -46,7 +46,7 @@ final class AboutWindowController: NSWindowController {
 struct AboutView: View {
     private var versionLine: String {
         let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? "0.1.0"
+        let version = info?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = info?["CFBundleVersion"] as? String ?? "1"
         return "Version \(version) (\(build))"
     }
@@ -55,6 +55,7 @@ struct AboutView: View {
         ZStack {
             Rectangle()
                 .fill(.ultraThinMaterial)
+                .ignoresSafeArea()
 
             LinearGradient(
                 colors: [
@@ -65,6 +66,7 @@ struct AboutView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+            .ignoresSafeArea()
 
             Circle()
                 .fill(Color.cyan.opacity(0.13))
@@ -105,12 +107,13 @@ struct AboutView: View {
             .padding(.top, 18)
         }
         .frame(width: 420, height: 350)
-        .background(.regularMaterial)
+        .background(.regularMaterial, ignoresSafeAreaEdges: .all)
     }
 }
 
 private struct PipelineSignature: View {
     private let stages: [(symbol: String, tint: Color)] = [
+        ("camera.aperture", .yellow),
         ("circle.lefthalf.filled", .orange),
         ("circle.dotted", .indigo),
         ("sun.horizon", .red),
@@ -140,6 +143,6 @@ private struct PipelineSignature: View {
                 .strokeBorder(.white.opacity(0.09), lineWidth: 0.5)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Spotlight, Diffusion, Halation, and Film Grain")
+        .accessibilityLabel("Film Tone, Spotlight, Diffusion, Halation, and Film Grain")
     }
 }

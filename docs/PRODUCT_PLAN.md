@@ -17,7 +17,7 @@ The promise is not “a lot of effects.” It is: **four closely related effects
 3. **Photographic rather than decorative.** Grain is signal-dependent and spatially correlated. Diffusion scatters light while retaining apparent acuity. Halation redistributes exposure through the film layers. Vignetting changes exposure rather than painting translucent black over the image.
 4. **Simple on the surface, deep when invited.** Most people choose a recipe. The trailing adjustment panel exposes the underlying four effects when invited.
 5. **Quietly trustworthy.** Originals are never modified, the same inputs and settings reproduce the same output, color profiles and useful metadata survive, and failed jobs explain themselves.
-6. **No fake precision.** Built-in recipes are stock-inspired unless they have been measured against controlled scans. Do not borrow Kodak, Fujifilm, or other stock names for vibes alone.
+6. **No fake precision.** Built-in recipes remain descriptive. Named color stocks must come from a disclosed measured or spectral negative-to-print model, identify the simulated print pairing, and be presented as simulations rather than manufacturer-endorsed profiles.
 
 ## Scope
 
@@ -39,21 +39,22 @@ The promise is not “a lot of effects.” It is: **four closely related effects
 
 - A photo library, asset catalog, nondestructive edit history, layers, masks, color grading, or crop tools.
 - Video, Live Photos, animated images, or image sequences.
-- Claims of laboratory-accurate named film-stock emulation.
+- Claims that named stock simulations are manufacturer profiles or exact substitutes for a complete capture, development, scan, and print workflow.
 - RAW development. A RAW file needs interpretive demosaicing and camera-specific controls, which would quietly turn Filmify into a RAW editor. Add it later only as an explicit workflow.
 - Full HDR/gain-map output. Version 1 should detect HDR or gain-map input and offer a clearly labeled SDR conversion instead of silently invalidating HDR metadata.
 - A privileged daemon. Watching operates while Filmify is running; Launch at Login is the transparent way to make it persistent.
 
 ## The interaction model
 
-The app has two foreground modes: a compact **Instant** workspace and a larger **Edit** workspace. A system toolbar holds the recipe picker at leading and an intrinsic-size mode picker at trailing. Watched-folder automation is configured in Settings and reports through the menu-bar item; it is not a third workspace competing with the photograph.
+The app has two foreground modes: a compact **Instant** workspace and a larger **Edit** workspace. The recipe picker follows the work: Instant presents the active recipe name as a dropdown in its processing explanation, while Edit places a compact icon dropdown at the trailing edge of the Adjustments header. The system toolbar keeps only the intrinsic-size mode picker at trailing. Watched-folder automation is configured in Settings and reports through the menu-bar item; it is not a third workspace competing with the photograph.
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│  Classic 35                         [ Instant ] [ Edit ]  │
+│                                     [ Instant ] [ Edit ]  │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │                   ↓ Drop images here                     │
+│        Process immediately with [ Classic 35 ⌄ ]         │
 │             JPEG · HEIC · PNG · TIFF                     │
 │                                                          │
 │        or choose images…        Output: Filmify Exports  │
@@ -67,7 +68,7 @@ Edit always includes a stable trailing Adjustments panel; Instant never includes
 
 ```text
 ┌──────────────────────────────────────┬───────────────────┐
-│                                      │ Adjustments       │
+│                                      │ Adjustments  [⌄]  │
 │          image / drop content        │                   │
 │                                      │ Vignette    [on]  │
 │                                      │ Amount    ━●━━━━  │
@@ -131,14 +132,15 @@ Watching continues when all Filmify windows are closed, because closing a Mac wi
 The primary UI exposes only:
 
 - Recipe
+- Film Tone on/off
 - Vignette on/off
 - Diffusion on/off
 - Halation on/off
 - Grain on/off
 
-The inspector exposes Amount and one defining control per effect. An Advanced disclosure exposes the less common parameters. Filmify ships with only three distinct starting points—Clean 120, Classic 35, and Soft 16. Save Current as Recipe… gives the working recipe a name; the Recipe Manager renames and deletes user recipes. Built-ins are immutable and always recoverable.
+The inspector exposes Amount and one defining control per effect. An Advanced disclosure exposes the less common parameters. Filmify ships with only three distinct starting points—Clean 120, Classic 35, and Soft 16. Save New Recipe… gives the working recipe a name; the Recipe Manager renames and deletes user recipes. Built-ins are immutable and always recoverable.
 
-All four Amount controls use a normalized `0.0–1.0` scale without effect-specific units. The renderer maps that common scale onto each effect’s physical or perceptual response. Existing recipes were recalculated so normalization changes their displayed numbers without changing their rendered appearance. Above the former Diffusion and Halation ceiling, the upper half progressively adds a second optical pass. Grain `0.30` is the calibrated Classic 35 amount, while `1.0` reaches roughly 3.3 times that response.
+All four Amount controls use a normalized `0.0–1.0` scale without effect-specific units. The renderer maps that common scale onto each effect’s physical or perceptual response. Existing recipes were recalculated so normalization changes their displayed numbers without changing their rendered appearance. Above the former Diffusion and Halation ceiling, the upper half progressively adds a second optical pass. Grain `0.25` is the calibrated Classic 35 amount, while `1.0` reaches four times that response.
 
 ### Effect-module pattern
 
@@ -151,6 +153,7 @@ Each effect follows the same compact hierarchy in pipeline order:
 
 | Effect | Primary | Character | Advanced |
 |---|---|---|---|
+| Film Tone | Color Stock, Stock Amount, Exposure | Contrast | Saturation, Vibrance, Warmth |
 | Spotlight/Vignette | Amount | Focus | Pop, Bias, roundness, center |
 | Lens Diffusion | Amount | Bloom | Veil/Fog, Source Bias, warmth, focus center |
 | Halation | Amount | Spill Radius | Tail, Color Shift, Saturation, green leakage |
@@ -193,7 +196,7 @@ It must remain recognizable at 16 points as “the droplet,” even when the gra
 
 ## Built-in recipes
 
-The built-in set should describe a useful photographic result rather than pretend to be a branded stock catalog.
+The built-in Recipes describe useful photographic results rather than pretend to be a branded stock catalog. Film Tone separately offers a compact selection of disclosed spectral negative-to-print simulations. These stock choices are ingredients that can be saved into any Recipe, not additional top-level Recipes.
 
 | Recipe | Intended character | Grain | Diffusion | Halation | Vignette |
 |---|---|---:|---:|---:|---:|
@@ -225,17 +228,22 @@ Core Image already provides a lazy image graph, Metal-backed rendering, tiling, 
 ```mermaid
 flowchart LR
     A["Decode + orient"] --> B["Color-match to linear float"]
-    B --> C["Spotlight / optical vignette"]
-    C --> D["Lens diffusion"]
-    D --> E["Film-layer halation"]
-    E --> F["Stochastic grain population"]
-    F --> G["Output color transform + dither"]
-    G --> H["Atomic encode + metadata"]
+    B --> C["Film tone + color"]
+    C --> D["Spotlight / optical vignette"]
+    D --> E["Lens diffusion"]
+    E --> F["Film-layer halation"]
+    F --> G["Stochastic grain population"]
+    G --> H["Output color transform + dither"]
+    H --> I["Atomic encode + metadata"]
 ```
 
-Light shaping precedes the image-forming effects because it changes the exposure entering the optical/film model. Lens diffusion comes before halation: a physical diffusion filter sits in the optical path, and its scattered light subsequently reaches the emulsion and can halate. Halation then redistributes exposure within the film structure. Grain is the stochastic density record of the resulting exposure.
+Film tone first establishes exposure, contrast, and color balance in a scene-linear working space. Light shaping then precedes the image-forming effects because it changes the exposure entering the optical/film model. Lens diffusion comes before halation: a physical diffusion filter sits in the optical path, and its scattered light subsequently reaches the emulsion and can halate. Halation then redistributes exposure within the film structure. Grain is the stochastic density record of the resulting exposure.
 
-The fixed, acquisition-faithful order is therefore **spotlight/vignette → lens diffusion → halation → grain**. Filmify should not expose arbitrary effect reordering in version 1; that adds editor-like complexity and makes recipes harder to calibrate.
+The fixed, acquisition-faithful order is therefore **film tone → spotlight/vignette → lens diffusion → halation → grain**. Filmify should not expose arbitrary effect reordering in version 1; that adds editor-like complexity and makes recipes harder to calibrate.
+
+Film Tone should avoid generic RGB adjustment math. Exposure operates on scene-linear luminance through a bounded photographic density family that fixes black and white, lifts deep tones decisively, and progressively reduces gain through the mids and highlights. The +1 EV response is calibrated against a same-source Lightroom reference rather than a nominal RGB multiplier. Raising exposure also contracts perceptual chroma progressively through the raised mids and shoulder, reproducing the loss of dye separation near white and preventing saturated channels from clipping early. Contrast remains a separate stops-based S-curve around 18% gray. Saturation, Vibrance, and Warmth operate in a perceptual color model derived from the linear Rec.2020 working space. Vibrance preferentially expands low-chroma colors while strongly excluding skin-like hues and easing off saturated colors and bright highlights. Warmth favors a Kodak Gold-like yellow-gold density through the midtones and highlights while retaining cleaner, less-red shadows. Chroma is gently compressed back toward the valid gamut rather than channel-clipped.
+
+The initial Color Stock set contains seven 33³ spectral negative-to-print cubes selected from ComfyUI-Darkroom: Portra 160 and 400 on Endura Premier, Gold 200 on Endura Premier, Ektar 100 on Endura Premier, Pro 400H on Crystal Archive Maxima, Superia Reala on Crystal Archive Pro PDII, and Vision3 250D on 2383. Velvia was removed as too aggressive for this compact set, and Vision3 500T was consolidated into 250D because their normalized results were not meaningfully distinguishable in Filmify. The cubes expect display-referred sRGB, so the renderer explicitly bridges from Filmify's extended-linear Rec.2020 working space into gamut-compressed sRGB for lookup and back to linear Rec.2020 afterward. Because the cubes contain full negative-to-print density curves, Filmify retains only 20% of their luminance change while preserving the chromatic response; Film Tone's dedicated controls remain responsible for contrast and exposure. Stock Amount defaults to 1.0 for the intended look and extends to 2.0 by extrapolating the treatment for deliberate overcooking. Zero amount is exactly neutral. Source revision and MIT attribution ship in the application bundle.
 
 ### Grain
 
@@ -552,7 +560,7 @@ The first video milestone should be a constrained SDR workflow:
 - video support in both Instant mode and watched folders; and
 - deterministic, time-aware grain derived from the recipe seed and frame timestamp, so grain changes naturally between frames without becoming frozen or flickering digitally.
 
-AVFoundation should supply frame decoding, timing, audio passthrough, and encoding. Each decoded frame then travels through the existing fixed pipeline—Spotlight → Diffusion → Halation → Grain—using a render context that includes presentation time or frame index. Preview and export must reproduce the same temporal grain sequence.
+AVFoundation should supply frame decoding, timing, audio passthrough, and encoding. Each decoded frame then travels through the existing fixed pipeline—Film Tone → Spotlight → Diffusion → Halation → Grain—using a render context that includes presentation time or frame index. Preview and export must reproduce the same temporal grain sequence.
 
 A later milestone may add ProRes, alpha, HDR and wide-color preservation, variable-frame-rate footage, multiple audio tracks, richer metadata handling, and full-quality real-time 4K playback. These capabilities should not expand the first video milestone. The constrained version is estimated at roughly one to two focused engineering weeks; a polished professional implementation is more plausibly four to eight weeks, with performance and color-management work carrying most of the risk.
 
@@ -563,7 +571,7 @@ A later milestone may add ProRes, alpha, HDR and wide-color preservation, variab
 | Minimum OS | macOS 26 | Native Liquid Glass without maintaining a parallel legacy visual system |
 | UI framework | SwiftUI with narrow AppKit bridges | Modern system appearance plus reliable Mac-specific file-open behavior |
 | Renderer | Core Image graph + custom Metal stochastic-grain and optical-scatter kernels | Color management, tiling, GPU execution, and custom photographic math |
-| Effect order | Spotlight/vignette → diffusion → halation → grain | Matches the path from light shaping through lens optics into the film structure |
+| Effect order | Film tone → spotlight/vignette → diffusion → halation → grain | Establishes tone and color before light shaping, lens optics, and film structure |
 | Distribution posture | Sandboxed and Mac App Store-compatible | Least privilege; user-selected folders are sufficient |
 | Watch lifetime | While Filmify runs; optional Launch at Login | Honest visibility and no unnecessary daemon |
 | Adjustments UI | Stable in-window trailing panel | Enough room for live controls without triggering AppKit inspector/window constraint races during mode changes |

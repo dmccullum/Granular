@@ -26,7 +26,7 @@ struct RecipeManagerView: View {
             Divider()
 
             HStack {
-                Button("New from Current Recipe…", systemImage: "plus") {
+                Button("Save New Recipe…", systemImage: "plus") {
                     model.saveCurrentAsRecipe()
                     selectedID = model.selectedRecipeID
                     loadDraftName()
@@ -126,6 +126,8 @@ struct RecipeManagerView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
+                    LabeledContent("Color Stock", value: recipe.tone.stock.name)
+                    LabeledContent("Exposure", value: recipe.tone.exposure.formatted(.number.precision(.fractionLength(1))))
                     LabeledContent("Spotlight", value: recipe.lightShaping.amountStops.formatted(.number.precision(.fractionLength(2))))
                     LabeledContent("Diffusion", value: recipe.diffusion.amount.formatted(.number.precision(.fractionLength(2))))
                     LabeledContent("Halation", value: recipe.halation.amount.formatted(.number.precision(.fractionLength(2))))

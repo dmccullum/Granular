@@ -1,3 +1,4 @@
+import AppKit
 import FilmifyCore
 import SwiftUI
 
@@ -31,10 +32,6 @@ struct ContentView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                RecipeMenu()
-            }
-
             ToolbarItem(placement: .primaryAction) {
                 ModePicker()
             }
@@ -103,62 +100,239 @@ private struct ModePicker: View {
     }
 }
 
-private struct RecipeMenu: View {
+struct RecipeMenu: View {
     @Environment(AppModel.self) private var model
+    let showsRecipeName: Bool
+
+    init(showsRecipeName: Bool = false) {
+        self.showsRecipeName = showsRecipeName
+    }
 
     var body: some View {
-        Menu {
-            Section("Built-in") {
-                ForEach(FilmRecipe.builtIns) { recipe in
-                    recipeButton(recipe)
-                }
+        Group {
+            if showsRecipeName {
+                nativeButton
+            } else {
+                nativeButton
+                    .background(
+                        .quaternary.opacity(0.34),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
             }
-
-            if !model.savedRecipes.isEmpty {
-                Section("My Recipes") {
-                    ForEach(model.savedRecipes) { recipe in
-                        recipeButton(recipe)
-                    }
-                }
-            }
-
-            if model.operationMode == .edit {
-                Divider()
-                Button("Save Current as Recipe…", systemImage: "plus") {
-                    model.saveCurrentAsRecipe()
-                }
-                if model.isSelectedRecipeCustom {
-                    Button("Update “\(model.currentRecipe.name)”", systemImage: "square.and.arrow.down") {
-                        model.updateSelectedRecipe()
-                    }
-                    Button("Delete “\(model.currentRecipe.name)”", systemImage: "trash", role: .destructive) {
-                        model.deleteSelectedRecipe()
-                    }
-                }
-
-            }
-
-            Divider()
-            Button("Manage Recipes…", systemImage: "list.bullet") {
-                model.showRecipeManager = true
-            }
-        } label: {
-            Image(systemName: "camera.filters")
-                .accessibilityLabel(model.recipe.name)
         }
+        .fixedSize()
         .help("Choose or save a film recipe")
     }
 
-    @ViewBuilder
-    private func recipeButton(_ recipe: FilmRecipe) -> some View {
-        Button {
+    private var nativeButton: some View {
+        NativeRecipeMenuButton(
+            model: model,
+            showsRecipeName: showsRecipeName,
+            recipeName: model.recipeDisplayName,
+            selectedRecipeID: model.selectedRecipeID,
+            savedRecipes: model.savedRecipes,
+            operationMode: model.operationMode,
+            isSelectedRecipeCustom: model.isSelectedRecipeCustom,
+            isRecipeModified: model.isRecipeModified
+        )
+    }
+}
+
+@MainActor
+private struct NativeRecipeMenuButton: NSViewRepresentable {
+    let model: AppModel
+    let showsRecipeName: Bool
+    let recipeName: String
+    let selectedRecipeID: String
+    let savedRecipes: [FilmRecipe]
+    let operationMode: OperationMode
+    let isSelectedRecipeCustom: Bool
+    let isRecipeModified: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(model: model)
+    }
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton(title: "", target: context.coordinator, action: #selector(Coordinator.showMenu(_:)))
+        button.setButtonType(.momentaryPushIn)
+        button.focusRingType = .default
+        button.imageHugsTitle = true
+        button.imageScaling = .scaleNone
+        button.setAccessibilityLabel("Recipe: \(recipeName)")
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        context.coordinator.update(
+            model: model,
+            selectedRecipeID: selectedRecipeID,
+            savedRecipes: savedRecipes,
+            operationMode: operationMode,
+            isSelectedRecipeCustom: isSelectedRecipeCustom,
+            isRecipeModified: isRecipeModified
+        )
+
+        button.setAccessibilityLabel("Recipe: \(recipeName)")
+        button.toolTip = "Choose or save a film recipe"
+
+        if showsRecipeName {
+            button.title = recipeName
+            button.font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .medium)
+            button.image = symbol("chevron.down", pointSize: 8, weight: .semibold)
+            button.imagePosition = .imageTrailing
+            button.isBordered = false
+            button.bezelStyle = .inline
+            button.controlSize = .small
+            button.contentTintColor = .secondaryLabelColor
+        } else {
+            button.title = "⌄"
+            button.font = .systemFont(ofSize: 11, weight: .semibold)
+            button.image = symbol("camera.filters", pointSize: 13, weight: .medium)
+            button.imagePosition = .imageLeading
+            button.isBordered = false
+            button.bezelStyle = .inline
+            button.controlSize = .regular
+            button.contentTintColor = nil
+        }
+
+        button.invalidateIntrinsicContentSize()
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSButton, context: Context) -> CGSize? {
+        let fittingSize = nsView.fittingSize
+        return CGSize(
+            width: showsRecipeName ? fittingSize.width : 58,
+            height: showsRecipeName ? 20 : 32
+        )
+    }
+
+    private func symbol(_ name: String, pointSize: CGFloat, weight: NSFont.Weight) -> NSImage? {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: pointSize, weight: weight))
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        private var model: AppModel
+        private var selectedRecipeID = ""
+        private var savedRecipes: [FilmRecipe] = []
+        private var operationMode: OperationMode = .drop
+        private var isSelectedRecipeCustom = false
+        private var isRecipeModified = false
+
+        init(model: AppModel) {
+            self.model = model
+        }
+
+        func update(
+            model: AppModel,
+            selectedRecipeID: String,
+            savedRecipes: [FilmRecipe],
+            operationMode: OperationMode,
+            isSelectedRecipeCustom: Bool,
+            isRecipeModified: Bool
+        ) {
+            self.model = model
+            self.selectedRecipeID = selectedRecipeID
+            self.savedRecipes = savedRecipes
+            self.operationMode = operationMode
+            self.isSelectedRecipeCustom = isSelectedRecipeCustom
+            self.isRecipeModified = isRecipeModified
+        }
+
+        @objc func showMenu(_ sender: NSButton) {
+            let menu = makeMenu()
+            let origin = NSPoint(x: 0, y: sender.bounds.minY - 3)
+            menu.popUp(positioning: nil, at: origin, in: sender)
+        }
+
+        @objc private func selectRecipe(_ item: NSMenuItem) {
+            guard let recipeID = item.representedObject as? String,
+                  let recipe = model.availableRecipes.first(where: { $0.id == recipeID }) else { return }
             model.selectRecipe(recipe)
-        } label: {
-            if model.selectedRecipeID == recipe.id {
-                Label(recipe.name, systemImage: "checkmark")
-            } else {
-                Text(recipe.name)
+        }
+
+        @objc private func saveRecipe() {
+            model.saveCurrentAsRecipe()
+        }
+
+        @objc private func updateRecipe() {
+            model.updateSelectedRecipe()
+        }
+
+        @objc private func deleteRecipe() {
+            model.deleteSelectedRecipe()
+        }
+
+        @objc private func manageRecipes() {
+            model.showRecipeManager = true
+        }
+
+        private func makeMenu() -> NSMenu {
+            let menu = NSMenu()
+            menu.autoenablesItems = false
+
+            if isRecipeModified {
+                let custom = NSMenuItem(title: "Custom", action: nil, keyEquivalent: "")
+                custom.state = .on
+                custom.isEnabled = false
+                menu.addItem(custom)
+                menu.addItem(.separator())
             }
+
+            addRecipeSection("Built-in", recipes: FilmRecipe.builtIns, to: menu)
+
+            if !savedRecipes.isEmpty {
+                menu.addItem(.separator())
+                addRecipeSection("My Recipes", recipes: savedRecipes, to: menu)
+            }
+
+            if operationMode == .edit {
+                menu.addItem(.separator())
+                addAction(
+                    "Save New Recipe…",
+                    symbol: "plus",
+                    action: #selector(saveRecipe),
+                    to: menu
+                )
+                if isSelectedRecipeCustom {
+                    addAction(
+                        "Update “\(model.currentRecipe.name)”",
+                        symbol: "square.and.arrow.down",
+                        action: #selector(updateRecipe),
+                        to: menu
+                    )
+                    addAction(
+                        "Delete “\(model.currentRecipe.name)”…",
+                        symbol: "trash",
+                        action: #selector(deleteRecipe),
+                        to: menu
+                    )
+                }
+            }
+
+            menu.addItem(.separator())
+            addAction("Manage Recipes…", symbol: "list.bullet", action: #selector(manageRecipes), to: menu)
+            return menu
+        }
+
+        private func addRecipeSection(_ title: String, recipes: [FilmRecipe], to menu: NSMenu) {
+            menu.addItem(.sectionHeader(title: title))
+            for recipe in recipes {
+                let item = NSMenuItem(title: recipe.name, action: #selector(selectRecipe(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = recipe.id
+                item.state = !isRecipeModified && recipe.id == selectedRecipeID ? .on : .off
+                menu.addItem(item)
+            }
+        }
+
+        private func addAction(_ title: String, symbol: String, action: Selector, to menu: NSMenu) {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            item.target = self
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            menu.addItem(item)
         }
     }
 }
