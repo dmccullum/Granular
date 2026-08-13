@@ -41,7 +41,7 @@ private struct FilmToneCard: View {
     var body: some View {
         EffectCard(
             title: "Film Tone",
-            symbol: "camera.aperture",
+            symbol: "film",
             tint: .yellow,
             enabled: $settings.isEnabled,
             reset: reset,
@@ -80,8 +80,8 @@ private struct LightShapingCard: View {
 
     var body: some View {
         EffectCard(
-            title: "Spotlight",
-            symbol: "circle.lefthalf.filled",
+            title: "Vignette",
+            symbol: "camera.aperture",
             tint: .orange,
             enabled: $settings.isEnabled,
             reset: reset

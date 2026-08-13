@@ -128,7 +128,7 @@ struct RecipeManagerView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     LabeledContent("Color Stock", value: recipe.tone.stock.name)
                     LabeledContent("Exposure", value: recipe.tone.exposure.formatted(.number.precision(.fractionLength(1))))
-                    LabeledContent("Spotlight", value: recipe.lightShaping.amountStops.formatted(.number.precision(.fractionLength(2))))
+                    LabeledContent("Vignette", value: recipe.lightShaping.amountStops.formatted(.number.precision(.fractionLength(2))))
                     LabeledContent("Diffusion", value: recipe.diffusion.amount.formatted(.number.precision(.fractionLength(2))))
                     LabeledContent("Halation", value: recipe.halation.amount.formatted(.number.precision(.fractionLength(2))))
                     LabeledContent("Grain", value: recipe.grain.amount.formatted(.number.precision(.fractionLength(2))))
