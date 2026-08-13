@@ -347,6 +347,15 @@ public extension FilmRecipe {
             name: "Classic 35",
             tone: .init(isEnabled: false),
             lightShaping: .init(amountStops: 0.25, focus: 0.56),
+            diffusion: .init(amount: 0.06, bloom: 0.35, veil: 0.10),
+            halation: .init(amount: 0.15, spillRadius: 0.35, tail: 0.35),
+            grain: .init(amount: 0.17, particleSizeMicrons: 10, chroma: 0.12)
+        ),
+        FilmRecipe(
+            id: "extra-35",
+            name: "Extra 35",
+            tone: .init(isEnabled: false),
+            lightShaping: .init(amountStops: 0.25, focus: 0.56),
             diffusion: .init(amount: 0.10, bloom: 0.35, veil: 0.10),
             halation: .init(amount: 0.25, spillRadius: 0.35, tail: 0.35),
             grain: .init(amount: 0.25, particleSizeMicrons: 10, chroma: 0.12)
