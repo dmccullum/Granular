@@ -113,8 +113,8 @@ struct AboutView: View {
 
 private struct PipelineSignature: View {
     private let stages: [(symbol: String, tint: Color)] = [
-        ("camera.aperture", .yellow),
-        ("circle.lefthalf.filled", .orange),
+        ("film", .yellow),
+        ("camera.aperture", .orange),
         ("circle.dotted", .indigo),
         ("sun.horizon", .red),
         ("aqi.medium", .mint)
@@ -143,6 +143,6 @@ private struct PipelineSignature: View {
                 .strokeBorder(.white.opacity(0.09), lineWidth: 0.5)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Film Tone, Spotlight, Diffusion, Halation, and Film Grain")
+        .accessibilityLabel("Film Tone, Vignette, Diffusion, Halation, and Film Grain")
     }
 }
