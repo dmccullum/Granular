@@ -4,7 +4,7 @@ import Testing
 @testable import FilmifyCore
 
 @Test func builtInRecipesHaveStableIdentifiersAndRanges() {
-    #expect(FilmRecipe.builtIns.map(\.name) == ["Clean 120", "Classic 35", "Soft 16"])
+    #expect(FilmRecipe.builtIns.map(\.name) == ["Clean 120", "Classic 35", "Extra 35", "Soft 16"])
     #expect(Set(FilmRecipe.builtIns.map(\.id)).count == FilmRecipe.builtIns.count)
 
     for recipe in FilmRecipe.builtIns {
@@ -17,6 +17,16 @@ import Testing
         #expect(recipe.grain.particleSizeMicrons > 0)
         #expect(recipe.grain.virtualGateWidthMillimeters > 0)
     }
+}
+
+@Test func classic35UsesTheCIHBalance() {
+    let recipe = FilmRecipe.classic35
+
+    #expect(recipe.tone == FilmToneSettings(isEnabled: false))
+    #expect(recipe.lightShaping.amountStops == 0.25)
+    #expect(recipe.diffusion.amount == 0.06)
+    #expect(recipe.halation.amount == 0.15)
+    #expect(recipe.grain.amount == 0.17)
 }
 
 @Test func filmToneScalesWithRecipeStrength() {
@@ -179,9 +189,9 @@ import Testing
     let recipe = FilmRecipe.classic35
 
     #expect(recipe.lightShaping.amountStops == 0.25)
-    #expect(recipe.diffusion.amount == 0.10)
-    #expect(recipe.halation.amount == 0.25)
-    #expect(recipe.grain.amount == 0.25)
+    #expect(recipe.diffusion.amount == 0.06)
+    #expect(recipe.halation.amount == 0.15)
+    #expect(recipe.grain.amount == 0.17)
     #expect(recipe.grain.particleSizeMicrons == 10)
 }
 
@@ -198,8 +208,8 @@ import Testing
     #expect(recipe.grain.particleSizeMicrons == 6)
 }
 
-@Test func normalizedClassic35AmountsMapToThePriorRendererStrengths() {
-    let recipe = FilmRecipe.classic35
+@Test func extra35PreservesThePriorClassic35RendererStrengths() throws {
+    let recipe = try #require(FilmRecipe.builtIns.first { $0.id == "extra-35" })
 
     #expect(FilmRenderer.mappedSpotlightAmount(recipe.lightShaping.amountStops) == 1.0)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.diffusion.amount) == 0.20)
@@ -210,14 +220,14 @@ import Testing
 @Test func halationUsesNormalizedAmountsWithoutChangingRecipeStrengths() throws {
     #expect(HalationSettings.maximumAmount == 1)
     #expect(try #require(FilmRecipe.builtIns.first { $0.id == "clean-120" }).halation.amount == 0.10)
-    #expect(FilmRecipe.classic35.halation.amount == 0.25)
+    #expect(try #require(FilmRecipe.builtIns.first { $0.id == "extra-35" }).halation.amount == 0.25)
     #expect(try #require(FilmRecipe.builtIns.first { $0.id == "soft-16" }).halation.amount == 0.40)
 }
 
 @Test func diffusionUsesNormalizedAmountsWithoutChangingRecipeStrengths() throws {
     #expect(DiffusionSettings.maximumAmount == 1)
     #expect(try #require(FilmRecipe.builtIns.first { $0.id == "clean-120" }).diffusion.amount == 0.10)
-    #expect(FilmRecipe.classic35.diffusion.amount == 0.10)
+    #expect(try #require(FilmRecipe.builtIns.first { $0.id == "extra-35" }).diffusion.amount == 0.10)
     #expect(try #require(FilmRecipe.builtIns.first { $0.id == "soft-16" }).diffusion.amount == 0.40)
 }
 
