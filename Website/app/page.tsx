@@ -1,0 +1,66 @@
+import type { Metadata } from "next";
+import ParallaxMotion from "./ParallaxMotion";
+import ResultComparison from "./ResultComparison";
+
+export const metadata: Metadata = {
+  title: "Filmify — A film finish for still images",
+  description: "A native Mac app for giving still photographs a softer, warmer finish.",
+};
+
+export default function Home() {
+  return (
+    <main className="journal">
+      <ParallaxMotion />
+      <nav className="masthead">
+        <a className="journal-mark" href="#top" aria-label="Filmify home"><img src="/app-icon-dark.png" alt="" /> FILMIFY</a>
+        <a href="https://github.com/dmccullum/Filmify">GITHUB ↗</a>
+      </nav>
+
+      <section className="opening" id="top">
+        <div className="opening-words" data-parallax="10" aria-label="Give your photos a film-like finish">
+          <span>Give your</span><span>photos a</span><em>film-like finish.</em>
+        </div>
+        <figure className="opening-frame" data-parallax="-24">
+          <img src="/film-canister-hero.png" alt="A 35mm film canister with a curling strip of film" />
+        </figure>
+        <div className="opening-action">
+          <p>A native macOS app for adding film-like halation, grain, and more to your images.</p>
+          <a className="stamp stamp-yellow" href="https://github.com/dmccullum/Filmify">GET FILMIFY <b>↗</b></a>
+        </div>
+      </section>
+
+      <section className="workbench">
+        <div className="workbench-words"><span>Process a photo</span><em>in seconds,</em><span>or edit it live.</span></div>
+        <div className="workbench-views">
+          <figure className="app-frame edit-frame" data-parallax="-18">
+            <img src="/filmify-edit.png" alt="Filmify Edit mode" />
+          </figure>
+          <figure className="app-frame instant-frame" data-parallax="14">
+            <img src="/filmify-instant.png" alt="Filmify Instant mode" />
+          </figure>
+        </div>
+      </section>
+
+      <section className="ingredients-scatter">
+        <h2>Tools for a<br /><em>film-like finish.</em></h2>
+        <article className="ingredient tone-card" data-parallax="-14"><span>01</span><h3>FILM TONE</h3><p>Color stock, exposure, contrast, saturation, vibrance, and warmth—shaped with a gentler response.</p></article>
+        <article className="ingredient vignette-card" data-parallax="11"><span>02</span><h3>VIGNETTE</h3><p>Set the frame’s falloff with a photographic, lens-like vignette.</p></article>
+        <article className="ingredient diffusion-card" data-parallax="-10"><span>03</span><h3>DIFFUSION</h3><p>Black Pro-Mist-style bloom that gathers around the light.</p></article>
+        <article className="ingredient halation-card" data-parallax="13"><span>04</span><h3>HALATION</h3><p>A restrained warm spill where bright light meets the darker world.</p></article>
+        <article className="ingredient grain-card" data-parallax="-12"><span>05</span><h3>FILM GRAIN</h3><p>Light-responsive texture with scale, variation, chroma, and character.</p></article>
+      </section>
+
+      <section className="comparison-story">
+        <div className="comparison-intro"><h2>See the <em>results.</em></h2></div>
+        <ResultComparison />
+      </section>
+
+      <section className="last-frame">
+        <img src="/app-icon-dark.png" alt="Filmify app icon" />
+        <h2>Made with love<br />by <a href="https://danielm.cc">Daniel McCullum</a></h2>
+        <a className="stamp stamp-red" href="https://github.com/dmccullum/Filmify">VIEW ON GITHUB ↗</a>
+      </section>
+      <footer><span>FILMIFY / 2026</span><a href="#top">BACK TO TOP ↑</a></footer>
+    </main>
+  );
+}
