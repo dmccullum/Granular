@@ -178,7 +178,7 @@ private struct NativeRecipeMenuButton: NSViewRepresentable {
 
         if showsRecipeName {
             button.title = recipeName
-            button.font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .medium)
+            button.font = .systemFont(ofSize: NSFont.systemFontSize, weight: .regular)
             button.image = symbol("chevron.down", pointSize: 8, weight: .semibold)
             button.imagePosition = .imageTrailing
             button.isBordered = false
