@@ -3,10 +3,12 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 
+const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
+
 const comparisons = [
-  { before: "/result-one-before.jpeg", after: "/result-one-after.jpeg", label: "Bedroom" },
-  { before: "/result-two-before.jpeg", after: "/result-two-after.jpeg", label: "Doorway" },
-  { before: "/result-three-before.jpeg", after: "/result-three-after.jpeg", label: "Living room" },
+  { before: asset("/result-one-before.jpeg"), after: asset("/result-one-after.jpeg"), label: "Bedroom" },
+  { before: asset("/result-two-before.jpeg"), after: asset("/result-two-after.jpeg"), label: "Doorway" },
+  { before: asset("/result-three-before.jpeg"), after: asset("/result-three-after.jpeg"), label: "Living room" },
 ];
 
 export default function ResultComparison() {
