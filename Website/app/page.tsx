@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import ParallaxMotion from "./ParallaxMotion";
 import ResultComparison from "./ResultComparison";
 
+export const dynamic = "force-static";
+
+const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
+
 export const metadata: Metadata = {
   title: "Filmify — A film finish for still images",
   description: "A native Mac app for giving still photographs a softer, warmer finish.",
@@ -12,7 +16,7 @@ export default function Home() {
     <main className="journal">
       <ParallaxMotion />
       <nav className="masthead">
-        <a className="journal-mark" href="#top" aria-label="Filmify home"><img src="/app-icon-dark.png" alt="" /> FILMIFY</a>
+        <a className="journal-mark" href="#top" aria-label="Filmify home"><img src={asset("/app-icon-dark.png")} alt="" /> FILMIFY</a>
         <a href="https://github.com/dmccullum/Filmify">GITHUB ↗</a>
       </nav>
 
@@ -21,7 +25,7 @@ export default function Home() {
           <span>Give your</span><span>photos a</span><em>film-like finish.</em>
         </div>
         <figure className="opening-frame" data-parallax="-24">
-          <img src="/film-canister-hero.png" alt="A 35mm film canister with a curling strip of film" />
+          <img src={asset("/film-canister-hero.png")} alt="A 35mm film canister with a curling strip of film" />
         </figure>
         <div className="opening-action">
           <p>A native macOS app for adding film-like halation, grain, and more to your images.</p>
@@ -33,10 +37,10 @@ export default function Home() {
         <div className="workbench-words"><span>Process a photo</span><em>in seconds,</em><span>or edit it live.</span></div>
         <div className="workbench-views">
           <figure className="app-frame edit-frame" data-parallax="-18">
-            <img src="/filmify-edit.png" alt="Filmify Edit mode" />
+            <img src={asset("/filmify-edit.png")} alt="Filmify Edit mode" />
           </figure>
           <figure className="app-frame instant-frame" data-parallax="14">
-            <img src="/filmify-instant.png" alt="Filmify Instant mode" />
+            <img src={asset("/filmify-instant.png")} alt="Filmify Instant mode" />
           </figure>
         </div>
       </section>
@@ -56,7 +60,7 @@ export default function Home() {
       </section>
 
       <section className="last-frame">
-        <img src="/app-icon-dark.png" alt="Filmify app icon" />
+        <img src={asset("/app-icon-dark.png")} alt="Filmify app icon" />
         <h2>Made with love<br />by <a href="https://danielm.cc">Daniel McCullum</a></h2>
         <a className="stamp stamp-red" href="https://github.com/dmccullum/Filmify">VIEW ON GITHUB ↗</a>
       </section>
