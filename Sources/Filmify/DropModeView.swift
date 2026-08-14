@@ -15,7 +15,7 @@ struct DropModeView: View {
                 VStack(spacing: 4) {
                     Text("Drop images to Filmify")
                         .font(.title2.weight(.semibold))
-                    HStack(spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("They’ll be processed immediately with")
                             .foregroundStyle(.secondary)
                         RecipeMenu(showsRecipeName: true)
