@@ -1,24 +1,26 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
+
 export const metadata: Metadata = {
   title: "Filmify — A photographic finish for still images",
   description: "A native Mac app for film tone, diffusion, halation, and light-responsive grain.",
   openGraph: {
     title: "Filmify — A photographic finish for still images",
     description: "A native Mac app for film tone, diffusion, halation, and light-responsive grain.",
-    images: [{ url: "/app-icon-dark.png", width: 1024, height: 1024, alt: "Filmify app icon" }],
+    images: [{ url: asset("/app-icon-dark.png"), width: 1024, height: 1024, alt: "Filmify app icon" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Filmify — A photographic finish for still images",
     description: "A native Mac app for film tone, diffusion, halation, and light-responsive grain.",
-    images: ["/app-icon-dark.png"],
+    images: [asset("/app-icon-dark.png")],
   },
   icons: {
-    icon: "/app-icon-dark.png",
-    shortcut: "/app-icon-dark.png",
-    apple: "/app-icon-dark.png",
+    icon: asset("/app-icon-dark.png"),
+    shortcut: asset("/app-icon-dark.png"),
+    apple: asset("/app-icon-dark.png"),
   },
 };
 
