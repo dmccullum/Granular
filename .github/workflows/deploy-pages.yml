@@ -23,16 +23,16 @@ jobs:
     steps:
       - name: Check out the site
         uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: Website/pnpm-lock.yaml
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - name: Install website dependencies
         run: pnpm --dir Website install --frozen-lockfile
       - name: Build the static site
