@@ -1,6 +1,6 @@
-# Filmify Website
+# Granular Website
 
-The public landing page for [Filmify](https://github.com/dmccullum/Filmify), a native macOS app for adding a film-like finish to still images.
+The public landing page for [Granular](https://github.com/dmccullum/Granular), a native macOS app for adding a film-like finish to still images.
 
 ## Local development
 

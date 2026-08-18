@@ -1,5 +1,5 @@
 import AppKit
-import FilmifyCore
+import GranularCore
 import Foundation
 import Observation
 import ServiceManagement
@@ -519,7 +519,7 @@ final class AppModel {
         panel.allowedContentTypes = [type]
         panel.canCreateDirectories = true
         panel.nameFieldStringValue = sourceURL.deletingPathExtension().lastPathComponent
-            + " — Filmify."
+            + " — Granular."
             + (type.preferredFilenameExtension ?? "tiff")
         guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
 

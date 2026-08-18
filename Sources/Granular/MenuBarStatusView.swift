@@ -10,7 +10,7 @@ struct MenuBarStatusView: View {
                     .font(.title2)
                     .foregroundStyle(model.isWatching ? Color.green : Color.accentColor)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(model.isWatching ? "Filmify is watching" : "Filmify is paused")
+                    Text(model.isWatching ? "Granular is watching" : "Granular is paused")
                         .font(.headline)
                     Text(model.watchErrorMessage ?? model.watchStatusMessage)
                         .font(.caption)

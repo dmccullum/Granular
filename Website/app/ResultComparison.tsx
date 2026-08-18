@@ -24,12 +24,12 @@ export default function ResultComparison() {
       >
         <img className="comparison-before" src={current.before} alt={`Original ${current.label.toLowerCase()} photograph`} />
         <div className="comparison-after-wrap">
-          <img className="comparison-after" src={current.after} alt={`Filmify-finished ${current.label.toLowerCase()} photograph`} />
+          <img className="comparison-after" src={current.after} alt={`Granular-finished ${current.label.toLowerCase()} photograph`} />
         </div>
         <span className="comparison-label comparison-label-before">ORIGINAL</span>
-        <span className="comparison-label comparison-label-after">FILMIFY</span>
+        <span className="comparison-label comparison-label-after">GRANULAR</span>
         <input
-          aria-label="Compare original image with Filmify result"
+          aria-label="Compare original image with Granular result"
           className="comparison-control"
           max="100"
           min="0"

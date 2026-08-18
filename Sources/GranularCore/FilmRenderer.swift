@@ -12,15 +12,15 @@ public enum FilmRendererError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .kernelCompilationFailed(let name):
-            "Filmify could not compile its \(name) image kernel."
+            "Granular could not compile its \(name) image kernel."
         case .filmStockUnavailable(let name):
-            "Filmify could not load the \(name) color stock."
+            "Granular could not load the \(name) color stock."
         case .filmStockMalformed(let name):
             "The bundled \(name) color stock is not a valid 3D LUT."
         case .imageLoadFailed(let url):
-            "Filmify could not open \(url.lastPathComponent)."
+            "Granular could not open \(url.lastPathComponent)."
         case .renderFailed:
-            "Filmify could not render the image."
+            "Granular could not render the image."
         }
     }
 }
@@ -489,7 +489,7 @@ private extension FilmRenderer {
 
         // These spectral cubes include a complete negative-to-print density
         // response, but Color Stock is intended to supply color character rather
-        // than replace Filmify's tone controls. Keep only a restrained fraction
+        // than replace Granular's tone controls. Keep only a restrained fraction
         // of the cube's luminance move while preserving its chromatic signature.
         float restrainedY = mix(sourceY, gradedY, 0.20);
         vec3 colorGrade = positiveGrade * (restrainedY / gradedY);

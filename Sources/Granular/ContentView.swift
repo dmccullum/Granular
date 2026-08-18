@@ -1,5 +1,5 @@
 import AppKit
-import FilmifyCore
+import GranularCore
 import SwiftUI
 
 struct ContentView: View {
@@ -46,7 +46,7 @@ struct ContentView: View {
             RecipeManagerView()
                 .environment(model)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .filmifyOpenURLs)) { notification in
+        .onReceive(NotificationCenter.default.publisher(for: .granularOpenURLs)) { notification in
             guard let urls = notification.object as? [URL] else { return }
             if model.operationMode == .edit {
                 model.openForEditing(urls)
@@ -55,7 +55,7 @@ struct ContentView: View {
             }
         }
         .alert(
-            "Filmify Couldn’t Start",
+            "Granular Couldn’t Start",
             isPresented: Binding(
                 get: { model.startupError != nil },
                 set: { if !$0 { model.startupError = nil } }
