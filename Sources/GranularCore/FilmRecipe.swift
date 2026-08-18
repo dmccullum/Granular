@@ -48,7 +48,7 @@ public enum FilmStockID: String, CaseIterable, Codable, Hashable, Sendable {
             guard let stock = Self(rawValue: storedValue) else {
                 throw DecodingError.dataCorruptedError(
                     in: container,
-                    debugDescription: "Unknown Filmify color stock: \(storedValue)"
+                    debugDescription: "Unknown Granular color stock: \(storedValue)"
                 )
             }
             self = stock

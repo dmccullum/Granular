@@ -1,14 +1,14 @@
 import AppKit
-import FilmifyCore
+import GranularCore
 import SwiftUI
 
 extension Notification.Name {
-    static let filmifyOpenURLs = Notification.Name("FilmifyOpenURLs")
+    static let granularOpenURLs = Notification.Name("GranularOpenURLs")
 }
 
-final class FilmifyApplicationDelegate: NSObject, NSApplicationDelegate {
+final class GranularApplicationDelegate: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication, open urls: [URL]) {
-        NotificationCenter.default.post(name: .filmifyOpenURLs, object: urls)
+        NotificationCenter.default.post(name: .granularOpenURLs, object: urls)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -17,14 +17,14 @@ final class FilmifyApplicationDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct FilmifyDesktopApp: App {
-    @NSApplicationDelegateAdaptor(FilmifyApplicationDelegate.self) private var appDelegate
+struct GranularDesktopApp: App {
+    @NSApplicationDelegateAdaptor(GranularApplicationDelegate.self) private var appDelegate
     @State private var model = AppModel()
 
     var body: some Scene {
         @Bindable var model = model
 
-        Window("Filmify", id: "main") {
+        Window("Granular", id: "main") {
             ContentView()
                 .environment(model)
         }
@@ -108,7 +108,7 @@ struct FilmifyDesktopApp: App {
         }
 
         MenuBarExtra(
-            "Filmify",
+            "Granular",
             systemImage: model.isWatching ? "drop.fill" : "drop",
             isInserted: $model.showMenuBarExtra
         ) {
@@ -120,7 +120,7 @@ struct FilmifyDesktopApp: App {
 }
 
 private struct ViewerCommands: Commands {
-    @FocusedValue(\.filmifyViewerZoomController) private var zoomController
+    @FocusedValue(\.granularViewerZoomController) private var zoomController
     let model: AppModel
 
     var body: some Commands {
@@ -157,7 +157,7 @@ private struct ViewerCommands: Commands {
 private struct AboutCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("About Filmify") {
+            Button("About Granular") {
                 NSApp.activate(ignoringOtherApps: true)
                 AboutWindowController.shared.show()
             }

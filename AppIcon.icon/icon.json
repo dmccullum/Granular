@@ -6,8 +6,8 @@
     {
       "layers" : [
         {
-          "image-name" : "Filmify-Optics.png",
-          "name" : "Filmify Optics",
+          "image-name" : "Granular-Optics.png",
+          "name" : "Granular Optics",
           "position-specializations" : [
             {
               "idiom" : "square",
@@ -54,8 +54,8 @@
               "value" : false
             }
           ],
-          "image-name" : "Filmify-Background.png",
-          "name" : "Filmify Background"
+          "image-name" : "Granular-Background.png",
+          "name" : "Granular Background"
         }
       ],
       "name" : "Background",

@@ -1,5 +1,5 @@
 import AppKit
-import FilmifyCore
+import GranularCore
 import Observation
 import SwiftUI
 
@@ -40,14 +40,14 @@ final class ViewerZoomController {
     }
 }
 
-private struct FilmifyViewerZoomControllerKey: FocusedValueKey {
+private struct GranularViewerZoomControllerKey: FocusedValueKey {
     typealias Value = ViewerZoomController
 }
 
 extension FocusedValues {
-    var filmifyViewerZoomController: ViewerZoomController? {
-        get { self[FilmifyViewerZoomControllerKey.self] }
-        set { self[FilmifyViewerZoomControllerKey.self] = newValue }
+    var granularViewerZoomController: ViewerZoomController? {
+        get { self[GranularViewerZoomControllerKey.self] }
+        set { self[GranularViewerZoomControllerKey.self] = newValue }
     }
 }
 
@@ -83,7 +83,7 @@ struct EditModeView: View {
                                             model.showOriginal.toggle()
                                         } label: {
                                             Label(
-                                                model.showOriginal ? "Original" : "Filmify",
+                                                model.showOriginal ? "Original" : "Granular",
                                                 systemImage: model.showOriginal ? "eye.slash" : "eye"
                                             )
                                         }
@@ -124,7 +124,7 @@ struct EditModeView: View {
                 .background(.bar)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .focusedSceneValue(\.filmifyViewerZoomController, zoomController)
+        .focusedSceneValue(\.granularViewerZoomController, zoomController)
         .onChange(of: model.selectedSourceURL) { _, _ in
             zoomController.resetForNewImage()
             model.finishCenterAdjustment()

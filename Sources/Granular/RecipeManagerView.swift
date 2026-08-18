@@ -1,4 +1,4 @@
-import FilmifyCore
+import GranularCore
 import SwiftUI
 
 struct RecipeManagerView: View {

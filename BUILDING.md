@@ -1,6 +1,6 @@
-# Building Filmify
+# Building Granular
 
-Filmify can be built and ad-hoc signed locally without an Apple Developer
+Granular can be built and ad-hoc signed locally without an Apple Developer
 account. The resulting app is intended for use on the Mac that built it.
 
 ## Requirements
@@ -9,15 +9,15 @@ account. The resulting app is intended for use on the Mac that built it.
 - The full Xcode 26 application from Apple
 - Xcode opened at least once so it can install its required components
 
-Command Line Tools by themselves are not sufficient because Filmify uses
+Command Line Tools by themselves are not sufficient because Granular uses
 Apple's Icon Composer when assembling the app bundle.
 
 ## Easiest method
 
-1. Download or copy the complete Filmify source folder.
-2. Double-click **Build Filmify.command**.
+1. Download or copy the complete Granular source folder.
+2. Double-click **Build Granular.command**.
 3. Wait for the build to finish.
-4. Finder will reveal `dist/Filmify.app`.
+4. Finder will reveal `dist/Granular.app`.
 5. Drag the app into Applications.
 
 The script checks the important prerequisites, builds a release binary for the
@@ -26,11 +26,11 @@ Finder icon, applies the sandbox entitlements, and ad-hoc signs the result.
 
 ## Terminal method
 
-From the Filmify source folder:
+From the Granular source folder:
 
 ```sh
 ./Scripts/build-app.sh
-open -R dist/Filmify.app
+open -R dist/Granular.app
 ```
 
 Run the tests with:
@@ -57,7 +57,7 @@ If a ZIP utility removed the executable permission from the friendly build
 script:
 
 ```sh
-chmod +x "Build Filmify.command"
+chmod +x "Build Granular.command"
 ```
 
 Then double-click it again.
@@ -70,7 +70,7 @@ To create a clean source archive for sharing or distribution:
 ./Scripts/package-source.sh
 ```
 
-The script creates `dist/Filmify-1.2-source.zip`, excluding Git history,
+The script creates `dist/Granular-1.2-source.zip`, excluding Git history,
 previous builds, and local Finder metadata. It also verifies the ZIP after
 creating it.
 

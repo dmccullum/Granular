@@ -7,7 +7,7 @@ export const dynamic = "force-static";
 const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
 
 export const metadata: Metadata = {
-  title: "Filmify — A film finish for still images",
+  title: "Granular — A film finish for still images",
   description: "A native Mac app for giving still photographs a softer, warmer finish.",
 };
 
@@ -16,8 +16,8 @@ export default function Home() {
     <main className="journal">
       <ParallaxMotion />
       <nav className="masthead">
-        <a className="journal-mark" href="#top" aria-label="Filmify home"><img src={asset("/app-icon-dark.png")} alt="" /> FILMIFY</a>
-        <a href="https://github.com/dmccullum/Filmify">GITHUB ↗</a>
+        <a className="journal-mark" href="#top" aria-label="Granular home"><img src={asset("/app-icon-dark.png")} alt="" /> GRANULAR</a>
+        <a href="https://github.com/dmccullum/Granular">GITHUB ↗</a>
       </nav>
 
       <section className="opening" id="top">
@@ -29,7 +29,7 @@ export default function Home() {
         </figure>
         <div className="opening-action">
           <p>A native macOS app for adding film-like halation, grain, and more to your images.</p>
-          <a className="stamp stamp-yellow" href="https://github.com/dmccullum/Filmify">GET FILMIFY <b>↗</b></a>
+          <a className="stamp stamp-yellow" href="https://github.com/dmccullum/Granular">GET GRANULAR <b>↗</b></a>
         </div>
       </section>
 
@@ -37,10 +37,10 @@ export default function Home() {
         <div className="workbench-words"><span>Process a photo</span><em>in seconds,</em><span>or edit it live.</span></div>
         <div className="workbench-views">
           <figure className="app-frame edit-frame" data-parallax="-18">
-            <img src={asset("/filmify-edit.png")} alt="Filmify Edit mode" />
+            <img src={asset("/granular-edit.png")} alt="Granular Edit mode" />
           </figure>
           <figure className="app-frame instant-frame" data-parallax="14">
-            <img src={asset("/filmify-instant.png")} alt="Filmify Instant mode" />
+            <img src={asset("/granular-instant.png")} alt="Granular Instant mode" />
           </figure>
         </div>
       </section>
@@ -61,11 +61,11 @@ export default function Home() {
       </section>
 
       <section className="last-frame">
-        <img src={asset("/app-icon-dark.png")} alt="Filmify app icon" />
+        <img src={asset("/app-icon-dark.png")} alt="Granular app icon" />
         <h2>Made with love<br />by <a href="https://danielm.cc">Daniel McCullum</a></h2>
-        <a className="stamp stamp-red" href="https://github.com/dmccullum/Filmify">VIEW ON GITHUB ↗</a>
+        <a className="stamp stamp-red" href="https://github.com/dmccullum/Granular">VIEW ON GITHUB ↗</a>
       </section>
-      <footer><span>FILMIFY / 2026</span><a href="#top">BACK TO TOP ↑</a></footer>
+      <footer><span>GRANULAR / 2026</span><a href="#top">BACK TO TOP ↑</a></footer>
     </main>
   );
 }
