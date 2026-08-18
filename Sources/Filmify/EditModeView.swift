@@ -68,18 +68,27 @@ struct EditModeView: View {
                         .id(model.selectedSourceURL)
 
                         VStack {
-                            HStack {
-                                Spacer()
-                                if model.sourcePreview != nil, model.processedPreview != nil {
-                                    Button {
-                                        model.showOriginal.toggle()
-                                    } label: {
-                                        Label(
-                                            model.showOriginal ? "Original" : "Filmify",
-                                            systemImage: model.showOriginal ? "eye.slash" : "eye"
-                                        )
+                            ZStack {
+                                if let target = model.activeCenterTarget {
+                                    CenterAdjustmentStatusBar(target: target)
+                                        .transition(.move(edge: .top).combined(with: .opacity))
+                                }
+
+                                HStack {
+                                    Spacer()
+                                    if model.activeCenterTarget == nil,
+                                       model.sourcePreview != nil,
+                                       model.processedPreview != nil {
+                                        Button {
+                                            model.showOriginal.toggle()
+                                        } label: {
+                                            Label(
+                                                model.showOriginal ? "Original" : "Filmify",
+                                                systemImage: model.showOriginal ? "eye.slash" : "eye"
+                                            )
+                                        }
+                                        .buttonStyle(.glass)
                                     }
-                                    .buttonStyle(.glass)
                                 }
                             }
                             Spacer()
@@ -118,11 +127,28 @@ struct EditModeView: View {
         .focusedSceneValue(\.filmifyViewerZoomController, zoomController)
         .onChange(of: model.selectedSourceURL) { _, _ in
             zoomController.resetForNewImage()
+            model.finishCenterAdjustment()
+        }
+        .onChange(of: model.recipe.lightShaping.isEnabled) { _, enabled in
+            dismissCenterAdjustment(.vignette, when: enabled)
+        }
+        .onChange(of: model.recipe.lensBlur.isEnabled) { _, enabled in
+            dismissCenterAdjustment(.lensBlur, when: enabled)
+        }
+        .onExitCommand(perform: model.finishCenterAdjustment)
+        .onDisappear(perform: model.finishCenterAdjustment)
+    }
+
+    private func dismissCenterAdjustment(_ target: EffectCenterTarget, when enabled: Bool) {
+        if !enabled, model.activeCenterTarget == target {
+            model.finishCenterAdjustment()
         }
     }
 }
 
 private struct ZoomableImageCanvas: View {
+    @Environment(AppModel.self) private var model
+
     let image: NSImage
     let imagePixelSize: CGSize
     let zoomController: ViewerZoomController
@@ -150,18 +176,36 @@ private struct ZoomableImageCanvas: View {
 
             ZStack {
                 Color.clear
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: displaySize.width, height: displaySize.height)
-                    .shadow(color: .black.opacity(0.28), radius: 14, y: 5)
-                    .offset(panOffset)
-                    .contentShape(Rectangle())
-                    .gesture(panGesture(displaySize: displaySize, viewportSize: proxy.size, canPan: canPan))
+                ZStack {
+                    Image(nsImage: image)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: displaySize.width, height: displaySize.height)
+                        .shadow(color: .black.opacity(0.28), radius: 14, y: 5)
+                        .contentShape(Rectangle())
+                        .gesture(panGesture(displaySize: displaySize, viewportSize: proxy.size, canPan: canPan))
+
+                    if let target = model.activeCenterTarget {
+                        ImageCenterOverlay(
+                            target: target,
+                            position: model.centerPosition(for: target)
+                        ) { x, y in
+                            model.updateCenter(for: target, x: x, y: y)
+                        }
+                        .transition(.opacity)
+                    }
+                }
+                .frame(width: displaySize.width, height: displaySize.height)
+                .offset(panOffset)
+                .animation(.smooth(duration: 0.18), value: model.activeCenterTarget)
                     .onContinuousHover { phase in
                         switch phase {
                         case .active:
-                            (canPan ? NSCursor.openHand : NSCursor.arrow).set()
+                            if model.activeCenterTarget != nil {
+                                NSCursor.crosshair.set()
+                            } else {
+                                (canPan ? NSCursor.openHand : NSCursor.arrow).set()
+                            }
                         case .ended:
                             NSCursor.arrow.set()
                         }
@@ -207,7 +251,7 @@ private struct ZoomableImageCanvas: View {
     private func panGesture(displaySize: CGSize, viewportSize: CGSize, canPan: Bool) -> some Gesture {
         DragGesture(minimumDistance: 1)
             .onChanged { value in
-                guard canPan else { return }
+                guard canPan, model.activeCenterTarget == nil else { return }
                 if dragStartOffset == nil {
                     dragStartOffset = panOffset
                 }
@@ -224,7 +268,11 @@ private struct ZoomableImageCanvas: View {
             }
             .onEnded { _ in
                 dragStartOffset = nil
-                (canPan ? NSCursor.openHand : NSCursor.arrow).set()
+                if model.activeCenterTarget != nil {
+                    NSCursor.crosshair.set()
+                } else {
+                    (canPan ? NSCursor.openHand : NSCursor.arrow).set()
+                }
             }
     }
 
@@ -245,6 +293,123 @@ private struct ZoomableImageCanvas: View {
                 viewportLength: Double(viewportSize.height)
             ))
         )
+    }
+}
+
+private struct ImageCenterOverlay: View {
+    let target: EffectCenterTarget
+    let position: CGPoint
+    let update: (Double, Double) -> Void
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                guard proxy.size.width > 0, proxy.size.height > 0 else { return }
+                                let x = min(1, max(0, value.location.x / proxy.size.width))
+                                let y = min(1, max(0, value.location.y / proxy.size.height))
+                                update(
+                                    Double(x),
+                                    Double(1 - y)
+                                )
+                            }
+                    )
+
+                CenterTargetMark(tint: target.tint)
+                    .position(
+                        x: position.x * proxy.size.width,
+                        y: (1 - position.y) * proxy.size.height
+                    )
+                    .allowsHitTesting(false)
+            }
+        }
+        .accessibilityLabel("\(target.title) center")
+        .accessibilityValue(
+            "X \(Double(position.x).formatted(.percent.precision(.fractionLength(0)))), " +
+            "Y \(Double(position.y).formatted(.percent.precision(.fractionLength(0))))"
+        )
+    }
+}
+
+private struct CenterTargetMark: View {
+    let tint: Color
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(.black.opacity(0.46))
+                .frame(width: 34, height: 34)
+            Circle()
+                .strokeBorder(.white.opacity(0.92), lineWidth: 1.5)
+                .frame(width: 28, height: 28)
+            Circle()
+                .strokeBorder(tint, lineWidth: 2)
+                .frame(width: 20, height: 20)
+            Rectangle()
+                .fill(.white.opacity(0.9))
+                .frame(width: 36, height: 1)
+            Rectangle()
+                .fill(.white.opacity(0.9))
+                .frame(width: 1, height: 36)
+            Circle()
+                .fill(tint)
+                .frame(width: 5, height: 5)
+        }
+        .shadow(color: .black.opacity(0.45), radius: 4, y: 2)
+    }
+}
+
+private struct CenterAdjustmentStatusBar: View {
+    @Environment(AppModel.self) private var model
+
+    let target: EffectCenterTarget
+
+    var body: some View {
+        let position = model.centerPosition(for: target)
+
+        HStack(spacing: 9) {
+            Image(systemName: target.symbol)
+                .foregroundStyle(target.tint)
+            Text("Adjust \(target.title) Center")
+                .fontWeight(.medium)
+            Divider()
+                .frame(height: 14)
+            Text("X \(percentage(position.x))  Y \(percentage(position.y))")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+            Button("Done", action: model.finishCenterAdjustment)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .keyboardShortcut(.return, modifiers: [])
+        }
+        .font(.caption)
+        .padding(.leading, 12)
+        .padding(.trailing, 7)
+        .padding(.vertical, 7)
+        .background(.regularMaterial, in: Capsule())
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.11), lineWidth: 0.5)
+        }
+        .shadow(color: .black.opacity(0.2), radius: 8, y: 3)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func percentage(_ value: CGFloat) -> String {
+        Double(value).formatted(.percent.precision(.fractionLength(0)))
+    }
+}
+
+private extension EffectCenterTarget {
+    var tint: Color {
+        switch self {
+        case .vignette: .orange
+        case .lensBlur: .cyan
+        }
     }
 }
 

@@ -30,6 +30,7 @@ public final class FilmRenderer: @unchecked Sendable {
     private let stockInputKernel: CIColorKernel
     private let stockOutputKernel: CIColorKernel
     private let lightShapingKernel: CIColorKernel
+    private let lensBlurKernel: CIKernel
     private let diffusionKernel: CIColorKernel
     private let halationKernel: CIColorKernel
     private let grainKernel: CIColorKernel
@@ -49,6 +50,9 @@ public final class FilmRenderer: @unchecked Sendable {
         guard let lightShapingKernel = CIColorKernel(source: Self.lightShapingSource) else {
             throw FilmRendererError.kernelCompilationFailed("light-shaping")
         }
+        guard let lensBlurKernel = CIKernel(source: Self.lensBlurSource) else {
+            throw FilmRendererError.kernelCompilationFailed("lens-blur")
+        }
         guard let diffusionKernel = CIColorKernel(source: Self.diffusionSource) else {
             throw FilmRendererError.kernelCompilationFailed("diffusion")
         }
@@ -63,6 +67,7 @@ public final class FilmRenderer: @unchecked Sendable {
         self.stockInputKernel = stockInputKernel
         self.stockOutputKernel = stockOutputKernel
         self.lightShapingKernel = lightShapingKernel
+        self.lensBlurKernel = lensBlurKernel
         self.diffusionKernel = diffusionKernel
         self.halationKernel = halationKernel
         self.grainKernel = grainKernel
@@ -95,6 +100,9 @@ public final class FilmRenderer: @unchecked Sendable {
         }
         if recipe.lightShaping.isEnabled, recipe.lightShaping.amountStops != 0 {
             image = try applyLightShaping(image, settings: recipe.lightShaping, extent: extent)
+        }
+        if recipe.lensBlur.isEnabled, recipe.lensBlur.amount != 0 {
+            image = try applyLensBlur(image, settings: recipe.lensBlur, extent: extent)
         }
         if recipe.diffusion.isEnabled, recipe.diffusion.amount != 0 {
             image = try applyDiffusion(image, settings: recipe.diffusion, extent: extent)
@@ -192,6 +200,50 @@ public final class FilmRenderer: @unchecked Sendable {
             throw FilmRendererError.renderFailed
         }
         return output
+    }
+
+    private func applyLensBlur(
+        _ image: CIImage,
+        settings: LensBlurSettings,
+        extent: CGRect
+    ) throws -> CIImage {
+        let amount = Self.mappedLensBlurAmount(settings.amount)
+        let character = max(0, min(1, settings.character))
+        let rgbSeparation = Self.mappedLensBlurRGBSeparation(settings.colorFringing)
+        let shortEdge = min(extent.width, extent.height)
+        let nearRadius = max(0.7, shortEdge * (0.0007 + 0.0028 * character) * amount)
+        let farRadius = max(2.0, shortEdge * (0.0045 + 0.0140 * character) * amount)
+        let nearBlur = apertureBlur(image, radius: nearRadius, extent: extent)
+        let farBlur = apertureBlur(image, radius: farRadius, extent: extent)
+        let maximumOffset = shortEdge * amount * (
+            0.0015 * character
+                + 0.0035 * rgbSeparation
+                + 0.0025 * max(0, min(1, settings.asymmetry))
+        )
+        let roiExpansion = ceil(farRadius * 3 + maximumOffset + 2)
+
+        let arguments: [Any] = [
+            image.clampedToExtent(),
+            nearBlur.clampedToExtent(),
+            farBlur.clampedToExtent(),
+            CIVector(cgRect: extent),
+            Float(amount),
+            Float(settings.falloff),
+            Float(character),
+            Float(rgbSeparation),
+            Float(settings.asymmetry),
+            Float(settings.direction),
+            CIVector(x: settings.focusX, y: settings.focusY),
+            Float(shortEdge)
+        ]
+        guard let output = lensBlurKernel.apply(
+            extent: extent,
+            roiCallback: { _, rect in rect.insetBy(dx: -roiExpansion, dy: -roiExpansion) },
+            arguments: arguments
+        ) else {
+            throw FilmRendererError.renderFailed
+        }
+        return output.cropped(to: extent)
     }
 
     private func applyDiffusion(
@@ -308,6 +360,14 @@ public final class FilmRenderer: @unchecked Sendable {
         min(1, max(0, amount)) * 4
     }
 
+    static func mappedLensBlurAmount(_ amount: Double) -> Double {
+        min(1, max(0, amount)) * 4
+    }
+
+    static func mappedLensBlurRGBSeparation(_ amount: Double) -> Double {
+        min(1, max(0, amount)) * 2
+    }
+
     private func applyGrain(
         _ image: CIImage,
         settings: GrainSettings,
@@ -344,6 +404,18 @@ public final class FilmRenderer: @unchecked Sendable {
         image
             .clampedToExtent()
             .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: radius])
+            .cropped(to: extent)
+    }
+
+    private func apertureBlur(_ image: CIImage, radius: CGFloat, extent: CGRect) -> CIImage {
+        // Defocus in a perceptual encoding so a bright source does not turn the
+        // surrounding field into a diffusion halo. CIDiscBlur supplies a firmer,
+        // finite aperture footprint that reads as optical softness rather than fog.
+        image
+            .clampedToExtent()
+            .applyingFilter("CIGammaAdjust", parameters: ["inputPower": 0.5])
+            .applyingFilter("CIDiscBlur", parameters: [kCIInputRadiusKey: radius])
+            .applyingFilter("CIGammaAdjust", parameters: ["inputPower": 2.0])
             .cropped(to: extent)
     }
 }
@@ -622,6 +694,90 @@ private extension FilmRenderer {
         float contrast = 1.0 + (pop - 0.5) * amount * 0.16;
         rgb = max(vec3(0.0), (rgb - vec3(0.18)) * contrast + vec3(0.18));
         return vec4(rgb, pixel.a);
+    }
+    """#
+
+    static let lensBlurSource = #"""
+    kernel vec4 lensBlur(
+        sampler source,
+        sampler nearBlur,
+        sampler farBlur,
+        vec4 extent,
+        float amount,
+        float falloff,
+        float character,
+        float colorFringing,
+        float asymmetry,
+        float direction,
+        vec2 center,
+        float shortEdge
+    ) {
+        vec2 coordinate = destCoord();
+        vec2 uv = (coordinate - extent.xy) / extent.zw;
+        vec2 delta = uv - center;
+        float aspect = extent.z / max(extent.w, 1.0);
+        vec2 opticalDelta = vec2(delta.x, delta.y / max(aspect, 0.0001));
+        float cornerRadius = length(vec2(0.5, 0.5 / max(aspect, 0.0001)));
+        float radius = length(opticalDelta) / max(cornerRadius, 0.0001);
+        float angle = atan(opticalDelta.y, opticalDelta.x);
+
+        float directionAngle = direction * 6.28318530718;
+        float directional = cos(angle - directionAngle);
+        float irregularity = sin(angle * 3.0 + directionAngle * 0.7)
+            * sin(angle * 2.0 - directionAngle * 0.35);
+        float distortedRadius = radius * (
+            1.0
+                + asymmetry * 0.18 * directional
+                + character * 0.055 * irregularity
+        );
+        float inner = mix(0.10, 0.68, clamp(falloff, 0.0, 1.0));
+        float outer = mix(0.86, 1.02, clamp(falloff, 0.0, 1.0));
+        float edge = smoothstep(inner, outer, distortedRadius);
+        float edgeCharacter = smoothstep(inner * 0.72, 1.02, distortedRadius);
+        float strength = clamp(amount, 0.0, 1.0) * edge;
+
+        vec2 radial = radius > 0.0001 ? opticalDelta / radius : vec2(0.0);
+        radial.y *= aspect;
+        vec2 tangent = vec2(-radial.y, radial.x);
+        float swirlPixels = shortEdge * character * amount * edgeCharacter
+            * (0.00035 + 0.00115 * radius);
+        vec2 decenter = vec2(cos(directionAngle), sin(directionAngle))
+            * shortEdge * asymmetry * amount * edgeCharacter * 0.0025;
+        vec2 warpedCoordinate = coordinate
+            + tangent * swirlPixels * (0.45 + 0.55 * irregularity)
+            + decenter;
+
+        vec4 sharp = sample(source, samplerTransform(source, warpedCoordinate));
+        vec4 nearSample = sample(nearBlur, samplerTransform(nearBlur, warpedCoordinate));
+        vec4 farSample = sample(farBlur, samplerTransform(farBlur, warpedCoordinate));
+        float farMix = smoothstep(0.28, 1.0, edge) * mix(0.42, 0.88, character);
+        vec3 defocused = mix(nearSample.rgb, farSample.rgb, farMix);
+        vec3 rgb = mix(sharp.rgb, defocused, strength);
+
+        // A vintage prism creates broad, translucent color ghosts rather than the
+        // hard red/cyan outlines associated with corrected digital-lens profiles.
+        // Let its axis drift between the user direction and the local radial field,
+        // then source the separated channels from the defocused images themselves.
+        vec2 directedAxis = vec2(cos(directionAngle), sin(directionAngle));
+        vec2 prismAxis = normalize(
+            directedAxis * (0.64 + asymmetry * 0.18)
+                + radial * 0.36
+                + tangent * irregularity * character * 0.10
+        );
+        float overcook = smoothstep(1.0, 4.0, amount);
+        float prismPixels = shortEdge * clamp(colorFringing, 0.0, 2.0)
+            * edgeCharacter * mix(0.0030, 0.0075, overcook)
+            * mix(0.72, 1.18, character);
+        vec2 prismOffset = prismAxis * prismPixels;
+        vec4 redGhost = sample(farBlur, samplerTransform(farBlur, warpedCoordinate + prismOffset));
+        vec4 greenGhost = sample(nearBlur, samplerTransform(nearBlur, warpedCoordinate - prismOffset * 0.10));
+        vec4 blueGhost = sample(farBlur, samplerTransform(farBlur, warpedCoordinate - prismOffset * 0.86));
+        vec3 prism = vec3(redGhost.r, greenGhost.g, blueGhost.b);
+        float prismMix = clamp(colorFringing, 0.0, 2.0)
+            * edgeCharacter * mix(0.48, 0.72, overcook);
+        rgb = mix(rgb, prism, prismMix);
+
+        return vec4(max(rgb, vec3(0.0)), sharp.a);
     }
     """#
 

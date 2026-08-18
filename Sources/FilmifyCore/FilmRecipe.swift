@@ -163,6 +163,42 @@ public struct LightShapingSettings: Codable, Hashable, Sendable {
     }
 }
 
+public struct LensBlurSettings: Codable, Hashable, Sendable {
+    public static let maximumAmount = 1.0
+
+    public var isEnabled: Bool
+    public var amount: Double
+    public var falloff: Double
+    public var character: Double
+    public var colorFringing: Double
+    public var asymmetry: Double
+    public var direction: Double
+    public var focusX: Double
+    public var focusY: Double
+
+    public init(
+        isEnabled: Bool = false,
+        amount: Double = 0.25,
+        falloff: Double = 0.55,
+        character: Double = 0.35,
+        colorFringing: Double = 0.075,
+        asymmetry: Double = 0.15,
+        direction: Double = 0.5,
+        focusX: Double = 0.5,
+        focusY: Double = 0.5
+    ) {
+        self.isEnabled = isEnabled
+        self.amount = amount
+        self.falloff = falloff
+        self.character = character
+        self.colorFringing = colorFringing
+        self.asymmetry = asymmetry
+        self.direction = direction
+        self.focusX = focusX
+        self.focusY = focusY
+    }
+}
+
 public struct DiffusionSettings: Codable, Hashable, Sendable {
     public static let maximumAmount = 1.0
 
@@ -271,6 +307,7 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
     public var strength: Double
     public var tone: FilmToneSettings
     public var lightShaping: LightShapingSettings
+    public var lensBlur: LensBlurSettings
     public var diffusion: DiffusionSettings
     public var halation: HalationSettings
     public var grain: GrainSettings
@@ -281,6 +318,7 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
         strength: Double = 1,
         tone: FilmToneSettings = .init(),
         lightShaping: LightShapingSettings,
+        lensBlur: LensBlurSettings = .init(),
         diffusion: DiffusionSettings,
         halation: HalationSettings,
         grain: GrainSettings
@@ -290,6 +328,7 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
         self.strength = strength
         self.tone = tone
         self.lightShaping = lightShaping
+        self.lensBlur = lensBlur
         self.diffusion = diffusion
         self.halation = halation
         self.grain = grain
@@ -301,6 +340,7 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
         case strength
         case tone
         case lightShaping
+        case lensBlur
         case diffusion
         case halation
         case grain
@@ -313,6 +353,7 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
         strength = try container.decodeIfPresent(Double.self, forKey: .strength) ?? 1
         tone = try container.decodeIfPresent(FilmToneSettings.self, forKey: .tone) ?? .init()
         lightShaping = try container.decode(LightShapingSettings.self, forKey: .lightShaping)
+        lensBlur = try container.decodeIfPresent(LensBlurSettings.self, forKey: .lensBlur) ?? .init()
         diffusion = try container.decode(DiffusionSettings.self, forKey: .diffusion)
         halation = try container.decode(HalationSettings.self, forKey: .halation)
         grain = try container.decode(GrainSettings.self, forKey: .grain)
@@ -325,6 +366,7 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
         try container.encode(strength, forKey: .strength)
         try container.encode(tone, forKey: .tone)
         try container.encode(lightShaping, forKey: .lightShaping)
+        try container.encode(lensBlur, forKey: .lensBlur)
         try container.encode(diffusion, forKey: .diffusion)
         try container.encode(halation, forKey: .halation)
         try container.encode(grain, forKey: .grain)
@@ -394,6 +436,7 @@ public extension FilmRecipe {
         result.tone.vibrance *= effectiveStrength
         result.tone.warmth *= effectiveStrength
         result.lightShaping.amountStops *= effectiveStrength
+        result.lensBlur.amount *= effectiveStrength
         result.diffusion.amount *= effectiveStrength
         result.diffusion.veil *= effectiveStrength
         result.halation.amount *= effectiveStrength
@@ -420,6 +463,12 @@ public extension FilmRecipe {
     func normalizedFromAmountScaleVersion2() -> FilmRecipe {
         var result = self
         result.grain.amount *= 2 / 3
+        return result
+    }
+
+    func normalizedFromAmountScaleVersion3() -> FilmRecipe {
+        var result = self
+        result.lensBlur.colorFringing /= 2
         return result
     }
 }
