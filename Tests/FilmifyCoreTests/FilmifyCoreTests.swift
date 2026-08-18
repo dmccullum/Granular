@@ -11,6 +11,8 @@ import Testing
         #expect((0 ... 1).contains(recipe.strength))
         #expect(recipe.tone == FilmToneSettings(isEnabled: false))
         #expect((0 ... 1).contains(recipe.lightShaping.amountStops))
+        #expect(recipe.lensBlur.isEnabled == false)
+        #expect((0 ... 1).contains(recipe.lensBlur.amount))
         #expect((0 ... 1).contains(recipe.diffusion.amount))
         #expect((0 ... 1).contains(recipe.halation.amount))
         #expect((0 ... 1).contains(recipe.grain.amount))
@@ -173,12 +175,24 @@ import Testing
     #expect(decoded.lightShaping == FilmRecipe.classic35.lightShaping)
 }
 
+@Test func recipesSavedBeforeLensBlurDecodeWithTheEffectDisabled() throws {
+    let encoded = try JSONEncoder().encode(FilmRecipe.classic35)
+    var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+    object.removeValue(forKey: "lensBlur")
+    let legacyData = try JSONSerialization.data(withJSONObject: object)
+    let decoded = try JSONDecoder().decode(FilmRecipe.self, from: legacyData)
+
+    #expect(decoded.lensBlur == LensBlurSettings())
+    #expect(decoded.lensBlur.isEnabled == false)
+}
+
 @Test func strengthScalesEffectAmountsWithoutChangingCharacterControls() {
     var recipe = FilmRecipe.classic35
     recipe.strength = 0.5
     let effective = recipe.effective
 
     #expect(effective.lightShaping.amountStops == recipe.lightShaping.amountStops * 0.5)
+    #expect(effective.lensBlur.amount == recipe.lensBlur.amount * 0.5)
     #expect(effective.diffusion.amount == recipe.diffusion.amount * 0.5)
     #expect(effective.halation.amount == recipe.halation.amount * 0.5)
     #expect(effective.grain.amount == recipe.grain.amount * 0.5)
@@ -299,6 +313,18 @@ import Testing
     #expect(FilmRenderer.mappedSpotlightAmount(1) == 4)
 }
 
+@Test func lensBlurStartsAtTheFormerMaximumAndAllowsOvercooking() {
+    #expect(FilmRenderer.mappedLensBlurAmount(0) == 0)
+    #expect(FilmRenderer.mappedLensBlurAmount(0.25) == 1)
+    #expect(FilmRenderer.mappedLensBlurAmount(1) == 4)
+}
+
+@Test func lensBlurRGBSeparationDoublesItsPreviousRange() {
+    #expect(FilmRenderer.mappedLensBlurRGBSeparation(0) == 0)
+    #expect(FilmRenderer.mappedLensBlurRGBSeparation(0.5) == 1)
+    #expect(FilmRenderer.mappedLensBlurRGBSeparation(1) == 2)
+}
+
 @Test func legacyCustomRecipeAmountsMigrateWithoutChangingRenderedStrength() {
     let legacy = FilmRecipe(
         id: "custom-legacy",
@@ -348,6 +374,25 @@ import Testing
     #expect(migrated.diffusion.amount == 0.25)
     #expect(migrated.halation.amount == 0.25)
     #expect(migrated.grain.amount == 0.25)
+}
+
+@Test func versionThreeLensBlurRecipesMigrateWithoutChangingRGBSeparation() {
+    let prior = FilmRecipe(
+        id: "custom-version-three",
+        name: "Version Three",
+        lightShaping: .init(),
+        lensBlur: .init(isEnabled: true, colorFringing: 1),
+        diffusion: .init(),
+        halation: .init(),
+        grain: .init()
+    )
+    let migrated = prior.normalizedFromAmountScaleVersion3()
+
+    #expect(migrated.lensBlur.colorFringing == 0.5)
+    #expect(
+        FilmRenderer.mappedLensBlurRGBSeparation(migrated.lensBlur.colorFringing)
+            == prior.lensBlur.colorFringing
+    )
 }
 
 @Test func viewerZoomUsesActualImageScaleAndFitGeometry() {
@@ -560,6 +605,70 @@ import Testing
     #expect(center < 0.85)
     #expect(nearHalo > 0.01)
     #expect(distantShadow < 0.005)
+}
+
+@Test func lensBlurSoftensTheFieldEdgesWhileKeepingTheOpticalCenterSharp() throws {
+    let extent = CGRect(x: 0, y: 0, width: 256, height: 256)
+    let black = CIImage(color: .init(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: extent)
+    let whiteHalf = CIImage(color: .init(red: 1, green: 1, blue: 1, alpha: 1))
+        .cropped(to: CGRect(x: 128, y: 0, width: 128, height: 256))
+    let source = whiteHalf.composited(over: black)
+    let recipe = FilmRecipe(
+        id: "lens-blur-test",
+        name: "Lens Blur Test",
+        lightShaping: .init(isEnabled: false),
+        lensBlur: .init(
+            isEnabled: true,
+            amount: 1,
+            falloff: 0.35,
+            character: 0.7,
+            colorFringing: 0,
+            asymmetry: 0
+        ),
+        diffusion: .init(isEnabled: false),
+        halation: .init(isEnabled: false),
+        grain: .init(isEnabled: false)
+    )
+
+    let pixels = renderFloatPixels(try FilmRenderer().render(source, recipe: recipe), extent: extent)
+    let centerDarkSide = pixels[((128 * 256 + 123) * 4)]
+    let edgeDarkSide = pixels[((8 * 256 + 123) * 4)]
+
+    #expect(centerDarkSide < 0.02)
+    #expect(edgeDarkSide > centerDarkSide + 0.02)
+}
+
+@Test func lensBlurRGBSeparationCreatesSoftPrismaticGhostsNearTheEdge() throws {
+    let extent = CGRect(x: 0, y: 0, width: 256, height: 256)
+    let black = CIImage(color: .init(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: extent)
+    let whiteHalf = CIImage(color: .init(red: 1, green: 1, blue: 1, alpha: 1))
+        .cropped(to: CGRect(x: 128, y: 0, width: 128, height: 256))
+    let source = whiteHalf.composited(over: black)
+    let recipe = FilmRecipe(
+        id: "lens-fringe-test",
+        name: "Lens Fringe Test",
+        lightShaping: .init(isEnabled: false),
+        lensBlur: .init(
+            isEnabled: true,
+            amount: 0.25,
+            falloff: 0.2,
+            character: 0.2,
+            colorFringing: 1,
+            asymmetry: 0
+        ),
+        diffusion: .init(isEnabled: false),
+        halation: .init(isEnabled: false),
+        grain: .init(isEnabled: false)
+    )
+
+    let pixels = renderFloatPixels(try FilmRenderer().render(source, recipe: recipe), extent: extent)
+    let edgeIndex = (8 * 256 + 126) * 4
+    let channelSeparation = max(
+        abs(pixels[edgeIndex] - pixels[edgeIndex + 1]),
+        abs(pixels[edgeIndex + 2] - pixels[edgeIndex + 1])
+    )
+
+    #expect(channelSeparation > 0.02)
 }
 
 @Test func processingServiceWritesAReadableCollisionSafeOutput() async throws {
