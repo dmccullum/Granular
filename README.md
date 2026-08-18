@@ -9,7 +9,7 @@ Filmify is a native macOS app for giving still images a more photographic, film-
 - **Watched folders** — automatically process new images placed in a selected folder.
 - **Recipes** — start with a small set of built-in looks, then save, rename, update, and delete your own.
 - **Film tone** — choose from curated color stocks and adjust exposure, contrast, saturation, vibrance, and warmth with a photographic response.
-- **Optical effects** — shape the frame with spotlight/vignette, Black Pro-Mist-style diffusion, restrained halation, and signal-dependent grain.
+- **Optical effects** — shape the frame with vignette, imperfect edge-focused lens blur and prismatic RGB separation, Black Pro-Mist-style diffusion, restrained halation, and signal-dependent grain.
 
 Filmify processes JPEG, HEIC, PNG, and TIFF images. The rendering order is fixed:
 

@@ -134,13 +134,14 @@ The primary UI exposes only:
 - Recipe
 - Film Tone on/off
 - Vignette on/off
+- Lens Blur on/off
 - Diffusion on/off
 - Halation on/off
 - Grain on/off
 
 The inspector exposes Amount and one defining control per effect. An Advanced disclosure exposes the less common parameters. Filmify ships with only three distinct starting points—Clean 120, Classic 35, and Soft 16. Save New Recipe… gives the working recipe a name; the Recipe Manager renames and deletes user recipes. Built-ins are immutable and always recoverable.
 
-All four Amount controls use a normalized `0.0–1.0` scale without effect-specific units. The renderer maps that common scale onto each effect’s physical or perceptual response. Existing recipes were recalculated so normalization changes their displayed numbers without changing their rendered appearance. Above the former Diffusion and Halation ceiling, the upper half progressively adds a second optical pass. Grain `0.25` is the calibrated Classic 35 amount, while `1.0` reaches four times that response.
+All five optical Amount controls use a normalized `0.0–1.0` scale without effect-specific units. The renderer maps that common scale onto each effect’s physical or perceptual response. Existing recipes were recalculated so normalization changes their displayed numbers without changing their rendered appearance. Above the former Diffusion and Halation ceiling, the upper half progressively adds a second optical pass. Grain `0.25` is the calibrated Classic 35 amount, while `1.0` reaches four times that response.
 
 ### Effect-module pattern
 
@@ -155,6 +156,7 @@ Each effect follows the same compact hierarchy in pipeline order:
 |---|---|---|---|
 | Film Tone | Color Stock, Stock Amount, Exposure | Contrast | Saturation, Vibrance, Warmth |
 | Spotlight/Vignette | Amount | Focus | Pop, Bias, roundness, center |
+| Lens Blur | Amount | Falloff | Character, RGB separation, asymmetry, direction, focus center |
 | Lens Diffusion | Amount | Bloom | Veil/Fog, Source Bias, warmth, focus center |
 | Halation | Amount | Spill Radius | Tail, Color Shift, Saturation, green leakage |
 | Grain | Amount | Particle Size | Acutance/Crispness, size variation, chroma, tonal response, seed |
@@ -239,7 +241,11 @@ flowchart LR
 
 Film tone first establishes exposure, contrast, and color balance in a scene-linear working space. Light shaping then precedes the image-forming effects because it changes the exposure entering the optical/film model. Lens diffusion comes before halation: a physical diffusion filter sits in the optical path, and its scattered light subsequently reaches the emulsion and can halate. Halation then redistributes exposure within the film structure. Grain is the stochastic density record of the resulting exposure.
 
-The fixed, acquisition-faithful order is therefore **film tone → spotlight/vignette → lens diffusion → halation → grain**. Filmify should not expose arbitrary effect reordering in version 1; that adds editor-like complexity and makes recipes harder to calibrate.
+The fixed, acquisition-faithful order is therefore **film tone → vignette → lens blur → lens diffusion → halation → grain**. Filmify should not expose arbitrary effect reordering; that adds editor-like complexity and makes recipes harder to calibrate.
+
+### Lens blur and aberration
+
+Lens Blur simulates field-dependent softness rather than applying a uniform blur. The optical center remains comparatively sharp while edge blur grows through a smooth falloff. Its perceptual-space aperture convolution keeps defocused shapes firmer and prevents the effect from becoming another form of highlight diffusion. Character introduces restrained tangential smear and low-frequency irregularity; asymmetry and direction mimic a decentered vintage lens. RGB Separation produces softly defocused, prismatic color ghosts instead of hard chromatic-aberration outlines. The 0.25 amount is the natural starting point, while the upper range is deliberately available for overcooked vintage-lens effects. These effects share a movable normalized focus center and remain ahead of diffusion and halation in the optical pipeline.
 
 Film Tone should avoid generic RGB adjustment math. Exposure operates on scene-linear luminance through a bounded photographic density family that fixes black and white, lifts deep tones decisively, and progressively reduces gain through the mids and highlights. The +1 EV response is calibrated against a same-source Lightroom reference rather than a nominal RGB multiplier. Raising exposure also contracts perceptual chroma progressively through the raised mids and shoulder, reproducing the loss of dye separation near white and preventing saturated channels from clipping early. Contrast remains a separate stops-based S-curve around 18% gray. Saturation, Vibrance, and Warmth operate in a perceptual color model derived from the linear Rec.2020 working space. Vibrance preferentially expands low-chroma colors while strongly excluding skin-like hues and easing off saturated colors and bright highlights. Warmth favors a Kodak Gold-like yellow-gold density through the midtones and highlights while retaining cleaner, less-red shadows. Chroma is gently compressed back toward the valid gamut rather than channel-clipped.
 
