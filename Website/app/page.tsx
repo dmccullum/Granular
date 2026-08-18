@@ -49,9 +49,10 @@ export default function Home() {
         <h2>Tools for a<br /><em>film-like finish.</em></h2>
         <article className="ingredient tone-card" data-parallax="-14"><span>01</span><h3>FILM TONE</h3><p>Color stock, exposure, contrast, saturation, vibrance, and warmth—shaped with a gentler response.</p></article>
         <article className="ingredient vignette-card" data-parallax="11"><span>02</span><h3>VIGNETTE</h3><p>Set the frame’s falloff with a photographic, lens-like vignette.</p></article>
-        <article className="ingredient diffusion-card" data-parallax="-10"><span>03</span><h3>DIFFUSION</h3><p>Black Pro-Mist-style bloom that gathers around the light.</p></article>
-        <article className="ingredient halation-card" data-parallax="13"><span>04</span><h3>HALATION</h3><p>A restrained warm spill where bright light meets the darker world.</p></article>
-        <article className="ingredient grain-card" data-parallax="-12"><span>05</span><h3>FILM GRAIN</h3><p>Light-responsive texture with scale, variation, chroma, and character.</p></article>
+        <article className="ingredient lens-blur-card" data-parallax="-10"><span>03</span><h3>LENS BLUR</h3><p>Off-axis optical blur with optional prismatic RGB separation.</p></article>
+        <article className="ingredient diffusion-card" data-parallax="13"><span>04</span><h3>DIFFUSION</h3><p>Black Pro-Mist-style bloom that gathers around the light.</p></article>
+        <article className="ingredient halation-card" data-parallax="-12"><span>05</span><h3>HALATION</h3><p>A restrained warm spill where bright light meets the darker world.</p></article>
+        <article className="ingredient grain-card" data-parallax="10"><span>06</span><h3>FILM GRAIN</h3><p>Light-responsive texture with scale, variation, chroma, and character.</p></article>
       </section>
 
       <section className="comparison-story">
