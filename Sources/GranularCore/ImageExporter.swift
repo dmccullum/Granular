@@ -15,11 +15,11 @@ public enum ImageExporterError: LocalizedError {
         case .unsupportedSourceFormat:
             "This image format is not supported yet."
         case .destinationCreationFailed:
-            "Filmify could not create the output file."
+            "Granular could not create the output file."
         case .imageCreationFailed:
-            "Filmify could not create the rendered image."
+            "Granular could not create the rendered image."
         case .finalizeFailed:
-            "Filmify could not finish writing the output file."
+            "Granular could not finish writing the output file."
         }
     }
 }
@@ -69,7 +69,7 @@ public final class ImageExporter: @unchecked Sendable {
         )
         let actualDestinationFolder = outputURL.deletingLastPathComponent()
         let temporaryURL = actualDestinationFolder
-            .appendingPathComponent(".filmify-\(UUID().uuidString)")
+            .appendingPathComponent(".granular-\(UUID().uuidString)")
             .appendingPathExtension(type.preferredFilenameExtension ?? "tmp")
 
         let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil)
@@ -149,7 +149,7 @@ public final class ImageExporter: @unchecked Sendable {
         destinationFolder: URL,
         fileExtension: String
     ) -> URL {
-        let base = sourceURL.deletingPathExtension().lastPathComponent + " — Filmify"
+        let base = sourceURL.deletingPathExtension().lastPathComponent + " — Granular"
         var candidate = destinationFolder.appendingPathComponent(base).appendingPathExtension(fileExtension)
         var suffix = 2
         while FileManager.default.fileExists(atPath: candidate.path) {

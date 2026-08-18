@@ -22,7 +22,7 @@ public actor WatchedFolderMonitor {
             case let .folderUnavailable(url):
                 "Incoming folder “\(url.lastPathComponent)” is no longer available. Choose it again."
             case let .folderUnreadable(url, reason):
-                "Filmify can’t read “\(url.lastPathComponent)”: \(reason)"
+                "Granular can’t read “\(url.lastPathComponent)”: \(reason)"
             }
         }
     }

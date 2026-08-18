@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="${0:A:h:h}"
 VERSION="$(/usr/bin/plutil -extract CFBundleShortVersionString raw "$ROOT/Resources/Info.plist")"
-PACKAGE_NAME="Filmify-$VERSION-source"
+PACKAGE_NAME="Granular-$VERSION-source"
 STAGE_ROOT="$ROOT/.build/source-package"
 STAGE="$STAGE_ROOT/$PACKAGE_NAME"
 ARCHIVE="$ROOT/dist/$PACKAGE_NAME.zip"
@@ -20,7 +20,7 @@ mkdir -p "$STAGE" "$ROOT/dist"
     "$ROOT/" "$STAGE/"
 
 chmod +x \
-    "$STAGE/Build Filmify.command" \
+    "$STAGE/Build Granular.command" \
     "$STAGE/Scripts/build-app.sh" \
     "$STAGE/Scripts/package-source.sh"
 

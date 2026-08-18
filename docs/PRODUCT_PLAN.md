@@ -1,12 +1,12 @@
-# Filmify: Product and Engineering Blueprint
+# Granular: Product and Engineering Blueprint
 
 Status: product definition  
 Date: 2026-07-21  
-Working title: **Filmify**
+Working title: **Granular**
 
 ## The product in one sentence
 
-Filmify is a small, native Mac utility that gives digital images convincing optical and photochemical texture: drop in images or point it at a folder, choose a film recipe, and receive finished copies with lens diffusion, restrained halation, tone-responsive grain, and optical light falloff.
+Granular is a small, native Mac utility that gives digital images convincing optical and photochemical texture: drop in images or point it at a folder, choose a film recipe, and receive finished copies with lens diffusion, restrained halation, tone-responsive grain, and optical light falloff.
 
 The promise is not “a lot of effects.” It is: **four closely related effects, done unusually well, with almost no ceremony.**
 
@@ -40,9 +40,9 @@ The promise is not “a lot of effects.” It is: **four closely related effects
 - A photo library, asset catalog, nondestructive edit history, layers, masks, color grading, or crop tools.
 - Video, Live Photos, animated images, or image sequences.
 - Claims that named stock simulations are manufacturer profiles or exact substitutes for a complete capture, development, scan, and print workflow.
-- RAW development. A RAW file needs interpretive demosaicing and camera-specific controls, which would quietly turn Filmify into a RAW editor. Add it later only as an explicit workflow.
+- RAW development. A RAW file needs interpretive demosaicing and camera-specific controls, which would quietly turn Granular into a RAW editor. Add it later only as an explicit workflow.
 - Full HDR/gain-map output. Version 1 should detect HDR or gain-map input and offer a clearly labeled SDR conversion instead of silently invalidating HDR metadata.
-- A privileged daemon. Watching operates while Filmify is running; Launch at Login is the transparent way to make it persistent.
+- A privileged daemon. Watching operates while Granular is running; Launch at Login is the transparent way to make it persistent.
 
 ## The interaction model
 
@@ -57,7 +57,7 @@ The app has two foreground modes: a compact **Instant** workspace and a larger *
 │        Process immediately with [ Classic 35 ⌄ ]         │
 │             JPEG · HEIC · PNG · TIFF                     │
 │                                                          │
-│        or choose images…        Output: Filmify Exports  │
+│        or choose images…        Output: Granular Exports  │
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
 │  ✓ portrait-02.jpg                         Reveal in Finder│
@@ -94,12 +94,12 @@ Edit always includes a stable trailing Adjustments panel; Instant never includes
 There are three equivalent entry points:
 
 - Drop images into the main window.
-- Drop images onto Filmify in the Dock.
+- Drop images onto Granular in the Dock.
 - Choose **File > Process Images…** (`⌘O`).
 
 A drop starts immediately with the active recipe. Instant mode deliberately shows no image preview and no adjustment inspector: it is a compact target plus current recipe, destination, and latest job status. If the app is launched by a Dock-icon drop, it may show this compact progress window but must not interpose a setup dialog.
 
-On the first drop, Filmify asks once: **Choose Instant Output Folder**. It stores a security-scoped bookmark and uses that destination for future drops, with the name `Original — Filmify.ext`. Collisions add ` 2`, ` 3`, and so on; no original or previous output is overwritten. This one-time grant is necessary because sandbox access to a dropped file does not automatically authorize writes to its parent directory.
+On the first drop, Granular asks once: **Choose Instant Output Folder**. It stores a security-scoped bookmark and uses that destination for future drops, with the name `Original — Granular.ext`. Collisions add ` 2`, ` 3`, and so on; no original or previous output is overwritten. This one-time grant is necessary because sandbox access to a dropped file does not automatically authorize writes to its parent directory.
 
 Settings may offer **Beside Original** only after the user has explicitly authorized the relevant parent folder. It must not imply that a file-level drag grants that permission. A direct-download, non-sandboxed edition could behave differently, but version 1 should keep one sandbox-compatible file model.
 
@@ -116,16 +116,16 @@ The first setup has two explicit rows:
 
 Then one clear action: **Start Watching** / **Pause Watching**.
 
-The output folder must not equal the incoming folder. If it is nested inside the incoming tree, Filmify either rejects the arrangement or explicitly excludes that subtree; rejecting it in version 1 is easier to explain and harder to misconfigure.
+The output folder must not equal the incoming folder. If it is nested inside the incoming tree, Granular either rejects the arrangement or explicitly excludes that subtree; rejecting it in version 1 is easier to explain and harder to misconfigure.
 
 Useful secondary controls live below a disclosure labeled Options:
 
 - Include subfolders (off by default)
 - Keep subfolder structure (on when recursive watching is enabled)
-- Launch Filmify at login (off by default)
-- Notify when a batch finishes (on only when Filmify is not frontmost)
+- Launch Granular at login (off by default)
+- Notify when a batch finishes (on only when Granular is not frontmost)
 
-Watching continues when all Filmify windows are closed, because closing a Mac window is not quitting the app. A menu-bar item appears while watching and shows **Watching**, **Paused**, **Processing n**, or **Needs Attention**. It offers Pause/Resume, Open Filmify, Reveal Incoming Folder, and Quit.
+Watching continues when all Granular windows are closed, because closing a Mac window is not quitting the app. A menu-bar item appears while watching and shows **Watching**, **Paused**, **Processing n**, or **Needs Attention**. It offers Pause/Resume, Open Granular, Reveal Incoming Folder, and Quit.
 
 ### Adjustments
 
@@ -139,7 +139,7 @@ The primary UI exposes only:
 - Halation on/off
 - Grain on/off
 
-The inspector exposes Amount and one defining control per effect. An Advanced disclosure exposes the less common parameters. Filmify ships with only three distinct starting points—Clean 120, Classic 35, and Soft 16. Save New Recipe… gives the working recipe a name; the Recipe Manager renames and deletes user recipes. Built-ins are immutable and always recoverable.
+The inspector exposes Amount and one defining control per effect. An Advanced disclosure exposes the less common parameters. Granular ships with only three distinct starting points—Clean 120, Classic 35, and Soft 16. Save New Recipe… gives the working recipe a name; the Recipe Manager renames and deletes user recipes. Built-ins are immutable and always recoverable.
 
 All five optical Amount controls use a normalized `0.0–1.0` scale without effect-specific units. The renderer maps that common scale onto each effect’s physical or perceptual response. Existing recipes were recalculated so normalization changes their displayed numbers without changing their rendered appearance. Above the former Diffusion and Halation ceiling, the upper half progressively adds a second optical pass. Grain `0.25` is the calibrated Classic 35 amount, while `1.0` reaches four times that response.
 
@@ -241,7 +241,7 @@ flowchart LR
 
 Film tone first establishes exposure, contrast, and color balance in a scene-linear working space. Light shaping then precedes the image-forming effects because it changes the exposure entering the optical/film model. Lens diffusion comes before halation: a physical diffusion filter sits in the optical path, and its scattered light subsequently reaches the emulsion and can halate. Halation then redistributes exposure within the film structure. Grain is the stochastic density record of the resulting exposure.
 
-The fixed, acquisition-faithful order is therefore **film tone → vignette → lens blur → lens diffusion → halation → grain**. Filmify should not expose arbitrary effect reordering; that adds editor-like complexity and makes recipes harder to calibrate.
+The fixed, acquisition-faithful order is therefore **film tone → vignette → lens blur → lens diffusion → halation → grain**. Granular should not expose arbitrary effect reordering; that adds editor-like complexity and makes recipes harder to calibrate.
 
 ### Lens blur and aberration
 
@@ -249,7 +249,7 @@ Lens Blur simulates field-dependent softness rather than applying a uniform blur
 
 Film Tone should avoid generic RGB adjustment math. Exposure operates on scene-linear luminance through a bounded photographic density family that fixes black and white, lifts deep tones decisively, and progressively reduces gain through the mids and highlights. The +1 EV response is calibrated against a same-source Lightroom reference rather than a nominal RGB multiplier. Raising exposure also contracts perceptual chroma progressively through the raised mids and shoulder, reproducing the loss of dye separation near white and preventing saturated channels from clipping early. Contrast remains a separate stops-based S-curve around 18% gray. Saturation, Vibrance, and Warmth operate in a perceptual color model derived from the linear Rec.2020 working space. Vibrance preferentially expands low-chroma colors while strongly excluding skin-like hues and easing off saturated colors and bright highlights. Warmth favors a Kodak Gold-like yellow-gold density through the midtones and highlights while retaining cleaner, less-red shadows. Chroma is gently compressed back toward the valid gamut rather than channel-clipped.
 
-The initial Color Stock set contains seven 33³ spectral negative-to-print cubes selected from ComfyUI-Darkroom: Portra 160 and 400 on Endura Premier, Gold 200 on Endura Premier, Ektar 100 on Endura Premier, Pro 400H on Crystal Archive Maxima, Superia Reala on Crystal Archive Pro PDII, and Vision3 250D on 2383. Velvia was removed as too aggressive for this compact set, and Vision3 500T was consolidated into 250D because their normalized results were not meaningfully distinguishable in Filmify. The cubes expect display-referred sRGB, so the renderer explicitly bridges from Filmify's extended-linear Rec.2020 working space into gamut-compressed sRGB for lookup and back to linear Rec.2020 afterward. Because the cubes contain full negative-to-print density curves, Filmify retains only 20% of their luminance change while preserving the chromatic response; Film Tone's dedicated controls remain responsible for contrast and exposure. Stock Amount defaults to 1.0 for the intended look and extends to 2.0 by extrapolating the treatment for deliberate overcooking. Zero amount is exactly neutral. Source revision and MIT attribution ship in the application bundle.
+The initial Color Stock set contains seven 33³ spectral negative-to-print cubes selected from ComfyUI-Darkroom: Portra 160 and 400 on Endura Premier, Gold 200 on Endura Premier, Ektar 100 on Endura Premier, Pro 400H on Crystal Archive Maxima, Superia Reala on Crystal Archive Pro PDII, and Vision3 250D on 2383. Velvia was removed as too aggressive for this compact set, and Vision3 500T was consolidated into 250D because their normalized results were not meaningfully distinguishable in Granular. The cubes expect display-referred sRGB, so the renderer explicitly bridges from Granular's extended-linear Rec.2020 working space into gamut-compressed sRGB for lookup and back to linear Rec.2020 afterward. Because the cubes contain full negative-to-print density curves, Granular retains only 20% of their luminance change while preserving the chromatic response; Film Tone's dedicated controls remain responsible for contrast and exposure. Stock Amount defaults to 1.0 for the intended look and extends to 2.0 by extrapolating the treatment for deliberate overcooking. Zero amount is exactly neutral. Source revision and MIT attribution ship in the application bundle.
 
 ### Grain
 
@@ -333,7 +333,7 @@ Store vignette falloff in stops; defaults stay between roughly 0.10 and 0.30 sto
 
 “Same as Source” is the default output format when the source is one of the four supported types. TIFF and PNG can be selected as universal lossless alternatives. The encoder copies appropriate EXIF/IPTC/XMP metadata, original capture date, and color profile, updates pixel dimensions and software tags, and offers a Settings switch to strip location metadata. Image I/O provides destination properties for metadata merging, orientation, color handling, and GPS exclusion; see [CGImageDestination](https://developer.apple.com/documentation/imageio/cgimagedestination).
 
-Never copy an old orientation tag after physically orienting pixels. Never retain a source gain map after changing its base pixels unless Filmify can regenerate a valid gain map.
+Never copy an old orientation tag after physically orienting pixels. Never retain a source gain map after changing its base pixels unless Granular can regenerate a valid gain map.
 
 ### Safe writes
 
@@ -366,7 +366,7 @@ Implementation rules:
 
 - Debounce directory events, then inspect supported regular files.
 - Require file size and modification date to remain unchanged across two probes, then open through a coordinated read. This avoids processing a large file while another app is still exporting it.
-- Ignore hidden files, temporary naming patterns, aliases/symlinks by default, unsupported packages, and Filmify’s own destination.
+- Ignore hidden files, temporary naming patterns, aliases/symlinks by default, unsupported packages, and Granular’s own destination.
 - Track a source fingerprint composed of volume/file identifier, size, modification time, and a short content signature. A modified replacement is a new version; a duplicate event is not a new job.
 - Persist the job ledger in SQLite so relaunching does not reprocess an entire folder and interrupted jobs can safely return to Queued.
 - Use a bounded queue. Start with one full-resolution GPU export at a time and measure before allowing two; multiple simultaneous 100-megapixel renders are a memory bug disguised as speed.
@@ -383,7 +383,7 @@ This design remains compatible with Mac App Store distribution and does not requ
 Recommended baseline: Swift 6, SwiftUI application lifecycle, targeted to macOS 26 or later, with narrow AppKit bridges where macOS behavior is more direct. Compile with the current stable Xcode SDK; standard components will inherit the current system appearance.
 
 ```text
-FilmifyApp
+GranularApp
 ├── AppShell
 │   ├── SwiftUI scenes, commands, inspector, settings, menu-bar extra
 │   └── AppKit delegate bridge for Finder/Dock file-open events
@@ -440,7 +440,7 @@ Recipe
   New Grain Pattern
 ```
 
-The Dock menu includes Process Images…, Pause/Resume Watching, and Show Filmify. Recent outputs support Reveal in Finder and Quick Look. Completion notifications appear only when the app is not active and only when the user has enabled them.
+The Dock menu includes Process Images…, Pause/Resume Watching, and Show Granular. Recent outputs support Reveal in Finder and Quick Look. Completion notifications appear only when the app is not active and only when the user has enabled them.
 
 Settings belong in a normal separate macOS Settings scene, not in the adjustment inspector:
 
@@ -579,7 +579,7 @@ A later milestone may add ProRes, alpha, HDR and wide-color preservation, variab
 | Renderer | Core Image graph + custom Metal stochastic-grain and optical-scatter kernels | Color management, tiling, GPU execution, and custom photographic math |
 | Effect order | Film tone → spotlight/vignette → diffusion → halation → grain | Establishes tone and color before light shaping, lens optics, and film structure |
 | Distribution posture | Sandboxed and Mac App Store-compatible | Least privilege; user-selected folders are sufficient |
-| Watch lifetime | While Filmify runs; optional Launch at Login | Honest visibility and no unnecessary daemon |
+| Watch lifetime | While Granular runs; optional Launch at Login | Honest visibility and no unnecessary daemon |
 | Adjustments UI | Stable in-window trailing panel | Enough room for live controls without triggering AppKit inspector/window constraint races during mode changes |
 | Default instant output | One user-selected destination, suffixed, never overwrite | Preserves immediate repeat behavior without pretending a file drag grants parent-folder access |
 | Default recipe | Classic 35 | A useful middle ground between Clean 120 and Soft 16 |

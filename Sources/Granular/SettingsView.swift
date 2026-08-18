@@ -1,4 +1,4 @@
-import FilmifyCore
+import GranularCore
 import ServiceManagement
 import SwiftUI
 
@@ -54,7 +54,7 @@ struct SettingsView: View {
                     }
                 }
 
-                Text("Files are processed with the currently selected recipe after they finish copying. Filmify remains available in the menu bar while watching.")
+                Text("Files are processed with the currently selected recipe after they finish copying. Granular remains available in the menu bar while watching.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -69,7 +69,7 @@ struct SettingsView: View {
             }
 
             Section("Application") {
-                Toggle("Launch Filmify at login", isOn: $launchAtLogin)
+                Toggle("Launch Granular at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, enabled in
                         model.setLaunchAtLogin(enabled)
                     }

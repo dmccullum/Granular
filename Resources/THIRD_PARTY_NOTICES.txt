@@ -1,4 +1,4 @@
-Filmify Third-Party Notices
+Granular Third-Party Notices
 ============================
 
 Spectral film-stock LUTs
@@ -39,5 +39,5 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Film-stock, manufacturer, and print-stock names are used descriptively.
-All associated trademarks belong to their respective owners. Filmify's looks
+All associated trademarks belong to their respective owners. Granular's looks
 are simulations and are not endorsed by or affiliated with those owners.
