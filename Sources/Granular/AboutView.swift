@@ -14,7 +14,7 @@ final class AboutWindowController: NSWindowController {
             defer: false
         )
         panel.contentViewController = hostingController
-        panel.title = "About Filmify"
+        panel.title = "About Granular"
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = true
@@ -83,7 +83,7 @@ struct AboutView: View {
                     .padding(.bottom, 13)
                     .accessibilityHidden(true)
 
-                Text("Filmify")
+                Text("Granular")
                     .font(.system(size: 28, weight: .semibold, design: .rounded))
 
                 Text("A little more film in every frame.")

@@ -1,7 +1,7 @@
 import CoreImage
 import Foundation
 import Testing
-@testable import FilmifyCore
+@testable import GranularCore
 
 @Test func builtInRecipesHaveStableIdentifiersAndRanges() {
     #expect(FilmRecipe.builtIns.map(\.name) == ["Clean 120", "Classic 35", "Extra 35", "Soft 16"])
@@ -673,7 +673,7 @@ import Testing
 
 @Test func processingServiceWritesAReadableCollisionSafeOutput() async throws {
     let directory = FileManager.default.temporaryDirectory
-        .appendingPathComponent("FilmifyTests-\(UUID().uuidString)", isDirectory: true)
+        .appendingPathComponent("GranularTests-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -695,14 +695,14 @@ import Testing
         options: .init(format: .png)
     )
 
-    #expect(outputURL.lastPathComponent == "frame — Filmify.png")
+    #expect(outputURL.lastPathComponent == "frame — Granular.png")
     #expect(FileManager.default.fileExists(atPath: outputURL.path))
     #expect(CIImage(contentsOf: outputURL)?.extent == sourceImage.extent)
 }
 
 @Test func watchedFolderRetriesFilesUntilProcessingSucceeds() async throws {
     let directory = FileManager.default.temporaryDirectory
-        .appendingPathComponent("FilmifyWatchTests-\(UUID().uuidString)", isDirectory: true)
+        .appendingPathComponent("GranularWatchTests-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -732,7 +732,7 @@ import Testing
 
 @Test func watchedFolderReportsAnUnavailableIncomingFolder() async {
     let missingFolder = FileManager.default.temporaryDirectory
-        .appendingPathComponent("MissingFilmifyWatchFolder-\(UUID().uuidString)", isDirectory: true)
+        .appendingPathComponent("MissingGranularWatchFolder-\(UUID().uuidString)", isDirectory: true)
     let recorder = WatchMonitorRecorder(succeedAfterAttempt: 1)
     let monitor = WatchedFolderMonitor(
         scanInterval: .milliseconds(15),

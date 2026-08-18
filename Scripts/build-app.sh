@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="${0:A:h:h}"
-APP="$ROOT/dist/Filmify.app"
+APP="$ROOT/dist/Granular.app"
 CONTENTS="$APP/Contents"
 ICON_SOURCE_PACKAGE="$ROOT/AppIcon.icon"
 
@@ -17,9 +17,9 @@ swift build -c release
 
 rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
-cp "$ROOT/.build/release/Filmify" "$CONTENTS/MacOS/Filmify"
+cp "$ROOT/.build/release/Granular" "$CONTENTS/MacOS/Granular"
 cp "$ROOT/Resources/Info.plist" "$CONTENTS/Info.plist"
-cp -R "$ROOT/Sources/FilmifyCore/FilmStocks" "$CONTENTS/Resources/FilmStocks"
+cp -R "$ROOT/Sources/GranularCore/FilmStocks" "$CONTENTS/Resources/FilmStocks"
 cp "$ROOT/Resources/THIRD_PARTY_NOTICES.txt" "$CONTENTS/Resources/THIRD_PARTY_NOTICES.txt"
 xcrun actool \
     "$ROOT/Resources/Assets.xcassets" \
@@ -28,7 +28,7 @@ xcrun actool \
     --platform macosx \
     --minimum-deployment-target 26.0 \
     --app-icon AppIcon \
-    --output-partial-info-plist "$ROOT/.build/Filmify-asset-info.plist"
+    --output-partial-info-plist "$ROOT/.build/Granular-asset-info.plist"
 
 # Icon Composer's macOS fallback can omit several legacy ICNS sizes. Finder
 # still relies on those flattened renditions in ordinary folders, even though
@@ -66,7 +66,7 @@ codesign \
     --force \
     --deep \
     --sign - \
-    --entitlements "$ROOT/Resources/Filmify.entitlements" \
+    --entitlements "$ROOT/Resources/Granular.entitlements" \
     "$APP"
 
 codesign --verify --deep --strict "$APP"

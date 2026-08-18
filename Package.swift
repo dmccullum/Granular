@@ -3,31 +3,31 @@
 import PackageDescription
 
 let package = Package(
-    name: "Filmify",
+    name: "Granular",
     platforms: [
         .macOS(.v26)
     ],
     products: [
-        .library(name: "FilmifyCore", targets: ["FilmifyCore"]),
-        .executable(name: "Filmify", targets: ["Filmify"])
+        .library(name: "GranularCore", targets: ["GranularCore"]),
+        .executable(name: "Granular", targets: ["Granular"])
     ],
     targets: [
         .target(
-            name: "FilmifyCore",
-            path: "Sources/FilmifyCore",
+            name: "GranularCore",
+            path: "Sources/GranularCore",
             resources: [
                 .copy("FilmStocks")
             ]
         ),
         .executableTarget(
-            name: "Filmify",
-            dependencies: ["FilmifyCore"],
-            path: "Sources/Filmify"
+            name: "Granular",
+            dependencies: ["GranularCore"],
+            path: "Sources/Granular"
         ),
         .testTarget(
-            name: "FilmifyCoreTests",
-            dependencies: ["FilmifyCore"],
-            path: "Tests/FilmifyCoreTests"
+            name: "GranularCoreTests",
+            dependencies: ["GranularCore"],
+            path: "Tests/GranularCoreTests"
         )
     ]
 )

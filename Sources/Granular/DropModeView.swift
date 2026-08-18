@@ -13,7 +13,7 @@ struct DropModeView: View {
                     .contentTransition(.symbolEffect(.replace))
 
                 VStack(spacing: 4) {
-                    Text("Drop images to Filmify")
+                    Text("Drop images to Granular")
                         .font(.title2.weight(.semibold))
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("They’ll be processed immediately with")
