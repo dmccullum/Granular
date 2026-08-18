@@ -18,6 +18,7 @@ struct AdjustmentsInspector: View {
 
                 FilmToneCard(settings: $model.recipe.tone, reset: model.resetTone)
                 LightShapingCard(settings: $model.recipe.lightShaping, reset: model.resetLightShaping)
+                LensBlurCard(settings: $model.recipe.lensBlur, reset: model.resetLensBlur)
                 DiffusionCard(settings: $model.recipe.diffusion, reset: model.resetDiffusion)
                 HalationCard(settings: $model.recipe.halation, reset: model.resetHalation)
                 GrainCard(
@@ -92,7 +93,43 @@ private struct LightShapingCard: View {
             ParameterSlider("Pop", value: $settings.pop, range: 0 ... 1)
             ParameterSlider("Bias", value: $settings.bias, range: 0 ... 1)
             ParameterSlider("Roundness", value: $settings.roundness, range: 0 ... 1)
-            FocusPad(title: "Center", x: $settings.centerX, y: $settings.centerY)
+            CenterControlRow(
+                title: "Center",
+                target: .vignette,
+                tint: .orange,
+                x: $settings.centerX,
+                y: $settings.centerY
+            )
+        }
+    }
+}
+
+private struct LensBlurCard: View {
+    @Binding var settings: LensBlurSettings
+    let reset: () -> Void
+
+    var body: some View {
+        EffectCard(
+            title: "Lens Blur",
+            symbol: "drop.halffull",
+            tint: .cyan,
+            enabled: $settings.isEnabled,
+            reset: reset
+        ) {
+            ParameterSlider("Amount", value: $settings.amount, range: 0 ... LensBlurSettings.maximumAmount)
+            ParameterSlider("Falloff", value: $settings.falloff, range: 0 ... 1)
+        } advanced: {
+            ParameterSlider("Character", value: $settings.character, range: 0 ... 1)
+            ParameterSlider("RGB Separation", value: $settings.colorFringing, range: 0 ... 1)
+            ParameterSlider("Asymmetry", value: $settings.asymmetry, range: 0 ... 1)
+            ParameterSlider("Direction", value: $settings.direction, range: 0 ... 1)
+            CenterControlRow(
+                title: "Focus",
+                target: .lensBlur,
+                tint: .cyan,
+                x: $settings.focusX,
+                y: $settings.focusY
+            )
         }
     }
 }
@@ -115,7 +152,6 @@ private struct DiffusionCard: View {
             ParameterSlider("Veil", value: $settings.veil, range: 0 ... 0.5)
             ParameterSlider("Source Bias", value: $settings.sourceBias, range: 0 ... 1)
             ParameterSlider("Warmth", value: $settings.warmth, range: -1 ... 1)
-            FocusPad(title: "Focus", x: $settings.focusX, y: $settings.focusY)
         }
     }
 }
@@ -395,36 +431,52 @@ private struct ParameterSlider: View {
     }
 }
 
-private struct FocusPad: View {
+private struct CenterControlRow: View {
+    @Environment(AppModel.self) private var model
+
     let title: String
+    let target: EffectCenterTarget
+    let tint: Color
     @Binding var x: Double
     @Binding var y: Double
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Text(title)
             Spacer()
-            GeometryReader { proxy in
-                ZStack {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.black.opacity(0.12))
-                    Circle()
-                        .fill(.white)
-                        .shadow(radius: 1)
-                        .frame(width: 7, height: 7)
-                        .position(x: x * proxy.size.width, y: y * proxy.size.height)
-                }
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            x = min(1, max(0, value.location.x / proxy.size.width))
-                            y = min(1, max(0, value.location.y / proxy.size.height))
-                        }
-                )
+
+            HStack(spacing: 7) {
+                Text("X \(percentage(x))")
+                Text("Y \(percentage(y))")
             }
-            .frame(width: 44, height: 30)
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+
+            Button {
+                withAnimation(.smooth(duration: 0.18)) {
+                    model.showOriginal = false
+                    model.activeCenterTarget = isActive ? nil : target
+                }
+            } label: {
+                Image(systemName: isActive ? "scope" : "viewfinder")
+                    .frame(width: 22, height: 20)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(isActive ? tint : nil)
+            .disabled(model.selectedSourceURL == nil)
+            .help(isActive ? "Finish adjusting \(title.lowercased())" : "Adjust \(title.lowercased()) on image")
+            .accessibilityLabel(isActive ? "Finish \(target.title) center adjustment" : "Adjust \(target.title) center on image")
         }
         .font(.caption)
+    }
+
+    private var isActive: Bool {
+        model.activeCenterTarget == target
+    }
+
+    private func percentage(_ value: Double) -> String {
+        value.formatted(.percent.precision(.fractionLength(0)))
     }
 }

@@ -12,6 +12,25 @@ enum OperationMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum EffectCenterTarget: String, Equatable {
+    case vignette
+    case lensBlur
+
+    var title: String {
+        switch self {
+        case .vignette: "Vignette"
+        case .lensBlur: "Lens Blur"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .vignette: "camera.aperture"
+        case .lensBlur: "drop.halffull"
+        }
+    }
+}
+
 enum JobState: Equatable {
     case queued
     case processing
@@ -43,6 +62,7 @@ final class AppModel {
     var savedRecipes: [FilmRecipe] = []
     var showRecipeManager = false
     var showOriginal = false
+    var activeCenterTarget: EffectCenterTarget?
     var isDropTargeted = false
     var outputOptions = OutputOptions()
 
@@ -86,6 +106,33 @@ final class AppModel {
     var previewImage: NSImage? {
         if showOriginal { return sourcePreview }
         return processedPreview ?? sourcePreview
+    }
+
+    func centerPosition(for target: EffectCenterTarget) -> CGPoint {
+        switch target {
+        case .vignette:
+            CGPoint(x: recipe.lightShaping.centerX, y: recipe.lightShaping.centerY)
+        case .lensBlur:
+            CGPoint(x: recipe.lensBlur.focusX, y: recipe.lensBlur.focusY)
+        }
+    }
+
+    func updateCenter(for target: EffectCenterTarget, x: Double, y: Double) {
+        let x = min(1, max(0, x))
+        let y = min(1, max(0, y))
+
+        switch target {
+        case .vignette:
+            recipe.lightShaping.centerX = x
+            recipe.lightShaping.centerY = y
+        case .lensBlur:
+            recipe.lensBlur.focusX = x
+            recipe.lensBlur.focusY = y
+        }
+    }
+
+    func finishCenterAdjustment() {
+        activeCenterTarget = nil
     }
 
     var availableRecipes: [FilmRecipe] {
@@ -280,6 +327,11 @@ final class AppModel {
 
     func resetTone() {
         recipe.tone = currentRecipe.tone
+        schedulePreview()
+    }
+
+    func resetLensBlur() {
+        recipe.lensBlur = currentRecipe.lensBlur
         schedulePreview()
     }
 
@@ -699,13 +751,16 @@ final class AppModel {
 
     private func restoreRecipes() {
         let defaults = UserDefaults.standard
+        let storedVersion = defaults.integer(forKey: RecipeKey.amountScaleVersion)
+        if storedVersion < 4 {
+            migrateWorkingRecipeRGBSeparation(in: defaults)
+        }
         guard let data = defaults.data(forKey: RecipeKey.saved) else {
             defaults.set(RecipeKey.currentAmountScaleVersion, forKey: RecipeKey.amountScaleVersion)
             return
         }
         guard let decoded = try? JSONDecoder().decode([FilmRecipe].self, from: data) else { return }
 
-        let storedVersion = defaults.integer(forKey: RecipeKey.amountScaleVersion)
         if storedVersion < RecipeKey.currentAmountScaleVersion {
             var migrated = decoded
             if storedVersion < 1 {
@@ -717,12 +772,32 @@ final class AppModel {
             if storedVersion < 3 {
                 migrated = migrated.map { $0.normalizedFromAmountScaleVersion2() }
             }
+            if storedVersion < 4,
+               let objects = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                migrated = migrated.enumerated().map { index, recipe in
+                    guard objects.indices.contains(index), objects[index]["lensBlur"] != nil else {
+                        return recipe
+                    }
+                    return recipe.normalizedFromAmountScaleVersion3()
+                }
+            }
             savedRecipes = migrated
             persistRecipes()
             defaults.set(RecipeKey.currentAmountScaleVersion, forKey: RecipeKey.amountScaleVersion)
         } else {
             savedRecipes = decoded
         }
+    }
+
+    private func migrateWorkingRecipeRGBSeparation(in defaults: UserDefaults) {
+        guard let data = defaults.data(forKey: RecipeKey.working),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              object["lensBlur"] != nil,
+              let decoded = try? JSONDecoder().decode(FilmRecipe.self, from: data),
+              let migrated = try? JSONEncoder().encode(decoded.normalizedFromAmountScaleVersion3()) else {
+            return
+        }
+        defaults.set(migrated, forKey: RecipeKey.working)
     }
 
     private func persistRecipes() {
@@ -804,5 +879,5 @@ private enum RecipeKey {
     static let selectedID = "recipes.selectedID"
     static let working = "recipes.working"
     static let isModified = "recipes.isModified"
-    static let currentAmountScaleVersion = 3
+    static let currentAmountScaleVersion = 4
 }
