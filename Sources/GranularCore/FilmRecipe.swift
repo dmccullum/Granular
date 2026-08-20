@@ -169,10 +169,7 @@ public struct LensBlurSettings: Codable, Hashable, Sendable {
     public var isEnabled: Bool
     public var amount: Double
     public var falloff: Double
-    public var character: Double
     public var colorFringing: Double
-    public var asymmetry: Double
-    public var direction: Double
     public var focusX: Double
     public var focusY: Double
 
@@ -180,22 +177,35 @@ public struct LensBlurSettings: Codable, Hashable, Sendable {
         isEnabled: Bool = false,
         amount: Double = 0.25,
         falloff: Double = 0.55,
-        character: Double = 0.35,
         colorFringing: Double = 0.075,
-        asymmetry: Double = 0.15,
-        direction: Double = 0.5,
         focusX: Double = 0.5,
         focusY: Double = 0.5
     ) {
         self.isEnabled = isEnabled
         self.amount = amount
         self.falloff = falloff
-        self.character = character
         self.colorFringing = colorFringing
-        self.asymmetry = asymmetry
-        self.direction = direction
         self.focusX = focusX
         self.focusY = focusY
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case isEnabled
+        case amount
+        case falloff
+        case colorFringing
+        case focusX
+        case focusY
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? false
+        amount = try container.decodeIfPresent(Double.self, forKey: .amount) ?? 0.25
+        falloff = try container.decodeIfPresent(Double.self, forKey: .falloff) ?? 0.55
+        colorFringing = try container.decodeIfPresent(Double.self, forKey: .colorFringing) ?? 0.075
+        focusX = try container.decodeIfPresent(Double.self, forKey: .focusX) ?? 0.5
+        focusY = try container.decodeIfPresent(Double.self, forKey: .focusY) ?? 0.5
     }
 }
 
