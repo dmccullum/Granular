@@ -325,6 +325,19 @@ import Testing
     #expect(FilmRenderer.mappedLensBlurRGBSeparation(1) == 2)
 }
 
+@Test func retiredLensBlurControlsAreIgnoredWhenLoadingRecipes() throws {
+    let encoded = try JSONEncoder().encode(LensBlurSettings(isEnabled: true, colorFringing: 0.42))
+    var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+    object["character"] = 0.9
+    object["rgbStrength"] = 0.8
+    object["asymmetry"] = 0.7
+    object["direction"] = 0.3
+    let legacyData = try JSONSerialization.data(withJSONObject: object)
+    let decoded = try JSONDecoder().decode(LensBlurSettings.self, from: legacyData)
+
+    #expect(decoded.colorFringing == 0.42)
+}
+
 @Test func legacyCustomRecipeAmountsMigrateWithoutChangingRenderedStrength() {
     let legacy = FilmRecipe(
         id: "custom-legacy",
@@ -621,9 +634,9 @@ import Testing
             isEnabled: true,
             amount: 1,
             falloff: 0.35,
-            character: 0.7,
             colorFringing: 0,
-            asymmetry: 0
+            focusX: 0,
+            focusY: 0.5
         ),
         diffusion: .init(isEnabled: false),
         halation: .init(isEnabled: false),
@@ -631,8 +644,8 @@ import Testing
     )
 
     let pixels = renderFloatPixels(try FilmRenderer().render(source, recipe: recipe), extent: extent)
-    let centerDarkSide = pixels[((128 * 256 + 123) * 4)]
-    let edgeDarkSide = pixels[((8 * 256 + 123) * 4)]
+    let centerDarkSide = pixels[((128 * 256 + 5) * 4)]
+    let edgeDarkSide = pixels[((128 * 256 + 123) * 4)]
 
     #expect(centerDarkSide < 0.02)
     #expect(edgeDarkSide > centerDarkSide + 0.02)
@@ -652,9 +665,9 @@ import Testing
             isEnabled: true,
             amount: 0.25,
             falloff: 0.2,
-            character: 0.2,
             colorFringing: 1,
-            asymmetry: 0
+            focusX: 0,
+            focusY: 0.5
         ),
         diffusion: .init(isEnabled: false),
         halation: .init(isEnabled: false),
@@ -662,13 +675,51 @@ import Testing
     )
 
     let pixels = renderFloatPixels(try FilmRenderer().render(source, recipe: recipe), extent: extent)
-    let edgeIndex = (8 * 256 + 126) * 4
+    let edgeIndex = (128 * 256 + 126) * 4
     let channelSeparation = max(
         abs(pixels[edgeIndex] - pixels[edgeIndex + 1]),
         abs(pixels[edgeIndex + 2] - pixels[edgeIndex + 1])
     )
 
     #expect(channelSeparation > 0.02)
+}
+
+@Test func highStrengthLensBlurAndAberrationRemainContinuouslyFeathered() throws {
+    let extent = CGRect(x: 0, y: 0, width: 384, height: 384)
+    let black = CIImage(color: .init(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: extent)
+    let whiteHalf = CIImage(color: .init(red: 1, green: 1, blue: 1, alpha: 1))
+        .cropped(to: CGRect(x: 192, y: 0, width: 192, height: 384))
+    let source = whiteHalf.composited(over: black)
+    let recipe = FilmRecipe(
+        id: "lens-smoothness-test",
+        name: "Lens Smoothness Test",
+        lightShaping: .init(isEnabled: false),
+        lensBlur: .init(
+            isEnabled: true,
+            amount: 1,
+            falloff: 0,
+            colorFringing: 1,
+            focusX: 0,
+            focusY: 0.5
+        ),
+        diffusion: .init(isEnabled: false),
+        halation: .init(isEnabled: false),
+        grain: .init(isEnabled: false)
+    )
+
+    let pixels = renderFloatPixels(try FilmRenderer().render(source, recipe: recipe), extent: extent)
+    let transition = 150 ... 230
+
+    // A sparse radial tap kernel produces a handful of repeated plateaus at high
+    // strength. The native continuous blur should retain many tonal steps in every
+    // separated channel through the same transition.
+    for channel in 0 ..< 3 {
+        let levels = Set(transition.map { x in
+            let value = pixels[((192 * 384 + x) * 4) + channel]
+            return Int((value * 200).rounded())
+        })
+        #expect(levels.count > 16)
+    }
 }
 
 @Test func processingServiceWritesAReadableCollisionSafeOutput() async throws {
