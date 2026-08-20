@@ -39,7 +39,7 @@ struct RecipeManagerView: View {
             }
             .padding(14)
         }
-        .frame(width: 560, height: 340)
+        .frame(width: 560, height: 360)
         .onAppear {
             selectedID = model.isSelectedRecipeCustom
                 ? model.selectedRecipeID
