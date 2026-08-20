@@ -30,7 +30,8 @@ public final class FilmRenderer: @unchecked Sendable {
     private let stockInputKernel: CIColorKernel
     private let stockOutputKernel: CIColorKernel
     private let lightShapingKernel: CIColorKernel
-    private let lensBlurKernel: CIKernel
+    private let lensRadialBlurKernel: CIKernel
+    private let lensChromaticKernel: CIKernel
     private let diffusionKernel: CIColorKernel
     private let halationKernel: CIColorKernel
     private let grainKernel: CIColorKernel
@@ -50,8 +51,11 @@ public final class FilmRenderer: @unchecked Sendable {
         guard let lightShapingKernel = CIColorKernel(source: Self.lightShapingSource) else {
             throw FilmRendererError.kernelCompilationFailed("light-shaping")
         }
-        guard let lensBlurKernel = CIKernel(source: Self.lensBlurSource) else {
+        guard let lensRadialBlurKernel = CIKernel(source: Self.lensRadialBlurSource) else {
             throw FilmRendererError.kernelCompilationFailed("lens-blur")
+        }
+        guard let lensChromaticKernel = CIKernel(source: Self.lensChromaticSource) else {
+            throw FilmRendererError.kernelCompilationFailed("chromatic-aberration")
         }
         guard let diffusionKernel = CIColorKernel(source: Self.diffusionSource) else {
             throw FilmRendererError.kernelCompilationFailed("diffusion")
@@ -67,7 +71,8 @@ public final class FilmRenderer: @unchecked Sendable {
         self.stockInputKernel = stockInputKernel
         self.stockOutputKernel = stockOutputKernel
         self.lightShapingKernel = lightShapingKernel
-        self.lensBlurKernel = lensBlurKernel
+        self.lensRadialBlurKernel = lensRadialBlurKernel
+        self.lensChromaticKernel = lensChromaticKernel
         self.diffusionKernel = diffusionKernel
         self.halationKernel = halationKernel
         self.grainKernel = grainKernel
@@ -208,38 +213,42 @@ public final class FilmRenderer: @unchecked Sendable {
         extent: CGRect
     ) throws -> CIImage {
         let amount = Self.mappedLensBlurAmount(settings.amount)
-        let character = max(0, min(1, settings.character))
         let rgbSeparation = Self.mappedLensBlurRGBSeparation(settings.colorFringing)
         let shortEdge = min(extent.width, extent.height)
-        let nearRadius = max(0.7, shortEdge * (0.0007 + 0.0028 * character) * amount)
-        let farRadius = max(2.0, shortEdge * (0.0045 + 0.0140 * character) * amount)
-        let nearBlur = apertureBlur(image, radius: nearRadius, extent: extent)
-        let farBlur = apertureBlur(image, radius: farRadius, extent: extent)
-        let maximumOffset = shortEdge * amount * (
-            0.0015 * character
-                + 0.0035 * rgbSeparation
-                + 0.0025 * max(0, min(1, settings.asymmetry))
-        )
-        let roiExpansion = ceil(farRadius * 3 + maximumOffset + 2)
-
-        let arguments: [Any] = [
-            image.clampedToExtent(),
-            nearBlur.clampedToExtent(),
-            farBlur.clampedToExtent(),
+        // Kromo's polar-space Gaussian reaches roughly one percent of image width
+        // plus height at strength 1. Granular keeps that calibration, but performs
+        // the convolution directly on the GPU around the user-selected center.
+        let maximumBlurOffset = (extent.width + extent.height) * 0.01 * amount
+        let maximumChromaticOffset = shortEdge * 0.044 * rgbSeparation
+        let roiExpansion = ceil(maximumBlurOffset + maximumChromaticOffset + 3)
+        let clamped = image.clampedToExtent()
+        let center = CIVector(x: settings.focusX, y: settings.focusY)
+        let blurArguments: [Any] = [
+            clamped,
             CIVector(cgRect: extent),
-            Float(amount),
+            Float(maximumBlurOffset),
             Float(settings.falloff),
-            Float(character),
-            Float(rgbSeparation),
-            Float(settings.asymmetry),
-            Float(settings.direction),
-            CIVector(x: settings.focusX, y: settings.focusY),
-            Float(shortEdge)
+            center
         ]
-        guard let output = lensBlurKernel.apply(
+        guard let radialBlur = lensRadialBlurKernel.apply(
             extent: extent,
             roiCallback: { _, rect in rect.insetBy(dx: -roiExpansion, dy: -roiExpansion) },
-            arguments: arguments
+            arguments: blurArguments
+        ) else {
+            throw FilmRendererError.renderFailed
+        }
+
+        let chromaticArguments: [Any] = [
+            radialBlur,
+            CIVector(cgRect: extent),
+            Float(settings.falloff),
+            Float(rgbSeparation),
+            center
+        ]
+        guard let output = lensChromaticKernel.apply(
+            extent: extent,
+            roiCallback: { _, rect in rect.insetBy(dx: -maximumChromaticOffset - 2, dy: -maximumChromaticOffset - 2) },
+            arguments: chromaticArguments
         ) else {
             throw FilmRendererError.renderFailed
         }
@@ -407,17 +416,6 @@ public final class FilmRenderer: @unchecked Sendable {
             .cropped(to: extent)
     }
 
-    private func apertureBlur(_ image: CIImage, radius: CGFloat, extent: CGRect) -> CIImage {
-        // Defocus in a perceptual encoding so a bright source does not turn the
-        // surrounding field into a diffusion halo. CIDiscBlur supplies a firmer,
-        // finite aperture footprint that reads as optical softness rather than fog.
-        image
-            .clampedToExtent()
-            .applyingFilter("CIGammaAdjust", parameters: ["inputPower": 0.5])
-            .applyingFilter("CIDiscBlur", parameters: [kCIInputRadiusKey: radius])
-            .applyingFilter("CIGammaAdjust", parameters: ["inputPower": 2.0])
-            .cropped(to: extent)
-    }
 }
 
 private extension FilmRenderer {
@@ -697,20 +695,13 @@ private extension FilmRenderer {
     }
     """#
 
-    static let lensBlurSource = #"""
-    kernel vec4 lensBlur(
+    static let lensRadialBlurSource = #"""
+    kernel vec4 lensRadialBlur(
         sampler source,
-        sampler nearBlur,
-        sampler farBlur,
         vec4 extent,
-        float amount,
+        float maximumOffset,
         float falloff,
-        float character,
-        float colorFringing,
-        float asymmetry,
-        float direction,
-        vec2 center,
-        float shortEdge
+        vec2 center
     ) {
         vec2 coordinate = destCoord();
         vec2 uv = (coordinate - extent.xy) / extent.zw;
@@ -719,65 +710,83 @@ private extension FilmRenderer {
         vec2 opticalDelta = vec2(delta.x, delta.y / max(aspect, 0.0001));
         float cornerRadius = length(vec2(0.5, 0.5 / max(aspect, 0.0001)));
         float radius = length(opticalDelta) / max(cornerRadius, 0.0001);
-        float angle = atan(opticalDelta.y, opticalDelta.x);
+        float inner = mix(0.08, 0.70, clamp(falloff, 0.0, 1.0));
+        float outer = mix(0.80, 1.02, clamp(falloff, 0.0, 1.0));
+        float edge = smoothstep(inner, outer, radius);
 
-        float directionAngle = direction * 6.28318530718;
-        float directional = cos(angle - directionAngle);
-        float irregularity = sin(angle * 3.0 + directionAngle * 0.7)
-            * sin(angle * 2.0 - directionAngle * 0.35);
-        float distortedRadius = radius * (
-            1.0
-                + asymmetry * 0.18 * directional
-                + character * 0.055 * irregularity
+        vec2 pixelCenter = extent.xy + center * extent.zw;
+        vec2 pixelDelta = coordinate - pixelCenter;
+        float pixelRadius = length(pixelDelta);
+        vec2 radial = pixelRadius > 0.0001
+            ? pixelDelta / pixelRadius
+            : vec2(0.0);
+
+        // This is Kromo's polar-space Gaussian expressed directly in Cartesian
+        // coordinates: convolution follows the radial axis, and its radius grows
+        // continuously as the image leaves the focus area. Forty-nine bilinear
+        // samples eliminate the discrete echoes visible in the former 7-tap pass.
+        float span = maximumOffset * edge;
+        vec4 accumulated = vec4(0.0);
+        float weightSum = 0.0;
+        for (int index = -24; index <= 24; index++) {
+            float position = float(index) / 24.0;
+            float gaussianPosition = position * 2.75;
+            float weight = exp(-0.5 * gaussianPosition * gaussianPosition);
+            vec2 sampleCoordinate = coordinate + radial * position * span;
+            accumulated += sample(
+                source,
+                samplerTransform(source, sampleCoordinate)
+            ) * weight;
+            weightSum += weight;
+        }
+        return accumulated / max(weightSum, 0.000001);
+    }
+    """#
+
+    static let lensChromaticSource = #"""
+    kernel vec4 lensChromatic(
+        sampler blurredSource,
+        vec4 extent,
+        float falloff,
+        float colorFringing,
+        vec2 center
+    ) {
+        vec2 coordinate = destCoord();
+        vec2 uv = (coordinate - extent.xy) / extent.zw;
+        vec2 delta = uv - center;
+        float aspect = extent.z / max(extent.w, 1.0);
+        vec2 opticalDelta = vec2(delta.x, delta.y / max(aspect, 0.0001));
+        float cornerRadius = length(vec2(0.5, 0.5 / max(aspect, 0.0001)));
+        float radius = length(opticalDelta) / max(cornerRadius, 0.0001);
+        float inner = mix(0.08, 0.70, clamp(falloff, 0.0, 1.0));
+        float outer = mix(0.80, 1.02, clamp(falloff, 0.0, 1.0));
+        float edge = smoothstep(inner, outer, radius);
+
+        vec2 pixelCenter = extent.xy + center * extent.zw;
+        vec2 pixelDelta = coordinate - pixelCenter;
+
+        // Match Kromo's continuous channel enlargement: red remains anchored,
+        // green expands slightly, and blue expands farther. Because this samples
+        // the already-continuous radial convolution, no colored tap bands appear.
+        float separation = clamp(colorFringing, 0.0, 2.0) * edge;
+        float greenScale = 0.018 * separation;
+        float blueScale = 0.044 * separation;
+        vec2 greenCoordinate = coordinate - pixelDelta * (greenScale / (1.0 + greenScale));
+        vec2 blueCoordinate = coordinate - pixelDelta * (blueScale / (1.0 + blueScale));
+
+        vec4 anchored = sample(
+            blurredSource,
+            samplerTransform(blurredSource, coordinate)
         );
-        float inner = mix(0.10, 0.68, clamp(falloff, 0.0, 1.0));
-        float outer = mix(0.86, 1.02, clamp(falloff, 0.0, 1.0));
-        float edge = smoothstep(inner, outer, distortedRadius);
-        float edgeCharacter = smoothstep(inner * 0.72, 1.02, distortedRadius);
-        float strength = clamp(amount, 0.0, 1.0) * edge;
-
-        vec2 radial = radius > 0.0001 ? opticalDelta / radius : vec2(0.0);
-        radial.y *= aspect;
-        vec2 tangent = vec2(-radial.y, radial.x);
-        float swirlPixels = shortEdge * character * amount * edgeCharacter
-            * (0.00035 + 0.00115 * radius);
-        vec2 decenter = vec2(cos(directionAngle), sin(directionAngle))
-            * shortEdge * asymmetry * amount * edgeCharacter * 0.0025;
-        vec2 warpedCoordinate = coordinate
-            + tangent * swirlPixels * (0.45 + 0.55 * irregularity)
-            + decenter;
-
-        vec4 sharp = sample(source, samplerTransform(source, warpedCoordinate));
-        vec4 nearSample = sample(nearBlur, samplerTransform(nearBlur, warpedCoordinate));
-        vec4 farSample = sample(farBlur, samplerTransform(farBlur, warpedCoordinate));
-        float farMix = smoothstep(0.28, 1.0, edge) * mix(0.42, 0.88, character);
-        vec3 defocused = mix(nearSample.rgb, farSample.rgb, farMix);
-        vec3 rgb = mix(sharp.rgb, defocused, strength);
-
-        // A vintage prism creates broad, translucent color ghosts rather than the
-        // hard red/cyan outlines associated with corrected digital-lens profiles.
-        // Let its axis drift between the user direction and the local radial field,
-        // then source the separated channels from the defocused images themselves.
-        vec2 directedAxis = vec2(cos(directionAngle), sin(directionAngle));
-        vec2 prismAxis = normalize(
-            directedAxis * (0.64 + asymmetry * 0.18)
-                + radial * 0.36
-                + tangent * irregularity * character * 0.10
-        );
-        float overcook = smoothstep(1.0, 4.0, amount);
-        float prismPixels = shortEdge * clamp(colorFringing, 0.0, 2.0)
-            * edgeCharacter * mix(0.0030, 0.0075, overcook)
-            * mix(0.72, 1.18, character);
-        vec2 prismOffset = prismAxis * prismPixels;
-        vec4 redGhost = sample(farBlur, samplerTransform(farBlur, warpedCoordinate + prismOffset));
-        vec4 greenGhost = sample(nearBlur, samplerTransform(nearBlur, warpedCoordinate - prismOffset * 0.10));
-        vec4 blueGhost = sample(farBlur, samplerTransform(farBlur, warpedCoordinate - prismOffset * 0.86));
-        vec3 prism = vec3(redGhost.r, greenGhost.g, blueGhost.b);
-        float prismMix = clamp(colorFringing, 0.0, 2.0)
-            * edgeCharacter * mix(0.48, 0.72, overcook);
-        rgb = mix(rgb, prism, prismMix);
-
-        return vec4(max(rgb, vec3(0.0)), sharp.a);
+        float green = sample(
+            blurredSource,
+            samplerTransform(blurredSource, greenCoordinate)
+        ).g;
+        float blue = sample(
+            blurredSource,
+            samplerTransform(blurredSource, blueCoordinate)
+        ).b;
+        return vec4(max(vec3(anchored.r, green, blue), vec3(0.0)), anchored.a);
     }
     """#
 

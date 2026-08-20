@@ -119,10 +119,7 @@ private struct LensBlurCard: View {
             ParameterSlider("Amount", value: $settings.amount, range: 0 ... LensBlurSettings.maximumAmount)
             ParameterSlider("Falloff", value: $settings.falloff, range: 0 ... 1)
         } advanced: {
-            ParameterSlider("Character", value: $settings.character, range: 0 ... 1)
-            ParameterSlider("RGB Separation", value: $settings.colorFringing, range: 0 ... 1)
-            ParameterSlider("Asymmetry", value: $settings.asymmetry, range: 0 ... 1)
-            ParameterSlider("Direction", value: $settings.direction, range: 0 ... 1)
+            ParameterSlider("Chromatic Aberration", value: $settings.colorFringing, range: 0 ... 1)
             CenterControlRow(
                 title: "Focus",
                 target: .lensBlur,
