@@ -853,13 +853,51 @@ private extension FilmRenderer {
         return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
     }
 
+    float filmTriangularNoise(vec2 pixel, float seed) {
+        float a = filmHash(pixel, seed);
+        float b = filmHash(pixel + vec2(37.0, 17.0), seed + 113.0);
+        float c = filmHash(pixel + vec2(11.0, 53.0), seed + 271.0);
+        // Match the contrast of the former interpolated field while giving the
+        // samples a softer, film-density-like distribution.
+        return (a + b + c - 1.5) * 0.36;
+    }
+
+    float filmParticleNoise(vec2 coordinate, vec2 pixel, float particlePixels, float seed) {
+        // At normal still-image grain sizes a fresh, distribution-shaped sample per
+        // output pixel avoids the lattice and cloudy clumps produced by interpolated
+        // value noise. As particles become visibly larger, gently blend in two
+        // differently rotated fields so the correlation remains organic rather than
+        // aligning to a square grid.
+        float independent = filmTriangularNoise(pixel, seed);
+        vec2 rotatedA = vec2(
+            coordinate.x * 0.819152 - coordinate.y * 0.573576,
+            coordinate.x * 0.573576 + coordinate.y * 0.819152
+        );
+        vec2 rotatedB = vec2(
+            coordinate.x * 0.422618 + coordinate.y * 0.906308,
+            -coordinate.x * 0.906308 + coordinate.y * 0.422618
+        );
+        float fieldA = filmNoise(rotatedA + vec2(19.7, 7.3), seed + 41.0) - 0.5;
+        float fieldB = filmNoise(rotatedB * 1.173 + vec2(5.1, 23.9), seed + 197.0) - 0.5;
+        float correlated = (fieldA * 0.58 + fieldB * 0.42) * 1.52;
+        float correlation = smoothstep(0.9, 2.8, particlePixels);
+        return mix(independent, correlated, correlation);
+    }
+
     kernel vec4 grain(__sample source, vec4 extent, float amount, float particlePixels, float acutance, float variation, float chroma, float shadowResponse, float highlightResponse, float seed) {
         vec2 coordinate = (destCoord() - extent.xy) / max(particlePixels, 0.5);
-        float primary = filmNoise(coordinate, seed) - 0.5;
-        float clumpScale = mix(0.62, 0.34, clamp(variation, 0.0, 1.0));
-        float clump = filmNoise(coordinate * clumpScale + vec2(17.3, 9.1), seed + 41.0) - 0.5;
-        float crisp = filmHash(floor(destCoord()), seed + 97.0) - 0.5;
-        float densityNoise = primary * 0.72 + clump * (0.18 + variation * 0.22) + crisp * acutance * 0.12;
+        vec2 pixel = floor(destCoord());
+        float primary = filmParticleNoise(coordinate, pixel, particlePixels, seed);
+        float alternateScale = mix(1.32, 0.74, clamp(variation, 0.0, 1.0));
+        float varied = filmParticleNoise(
+            coordinate * alternateScale + vec2(13.7, 29.1),
+            pixel + vec2(47.0, 31.0),
+            particlePixels / alternateScale,
+            seed + 431.0
+        );
+        float crisp = filmTriangularNoise(pixel + vec2(71.0, 43.0), seed + 887.0);
+        float variationMix = 0.04 + clamp(variation, 0.0, 1.0) * 0.16;
+        float densityNoise = primary * (0.88 - variationMix * 0.35) + varied * variationMix + crisp * acutance * 0.08;
 
         float luminance = max(0.00001, dot(source.rgb, vec3(0.2126, 0.7152, 0.0722)));
         float shadowWeight = pow(clamp(1.0 - luminance, 0.0, 1.0), 0.62);
@@ -870,10 +908,10 @@ private extension FilmRenderer {
         float luminanceScale = exp2(-(densityDelta + densityCompensation) * 3.321928);
 
         vec3 chromaNoise = vec3(
-            filmNoise(coordinate * 0.91 + vec2(3.1, 7.7), seed + 151.0),
-            filmNoise(coordinate * 1.07 + vec2(11.2, 2.4), seed + 263.0),
-            filmNoise(coordinate * 0.83 + vec2(5.8, 13.9), seed + 379.0)
-        ) - vec3(0.5);
+            filmParticleNoise(coordinate * 0.91 + vec2(3.1, 7.7), pixel + vec2(7.0, 61.0), particlePixels / 0.91, seed + 151.0),
+            filmParticleNoise(coordinate * 1.07 + vec2(11.2, 2.4), pixel + vec2(59.0, 13.0), particlePixels / 1.07, seed + 263.0),
+            filmParticleNoise(coordinate * 0.83 + vec2(5.8, 13.9), pixel + vec2(23.0, 79.0), particlePixels / 0.83, seed + 379.0)
+        );
         // Independent dye-layer variation is separated from the shared silver-density
         // component and made luminance-neutral so Chroma changes color texture rather
         // than overall grain contrast.
