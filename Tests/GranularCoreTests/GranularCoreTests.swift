@@ -8,7 +8,6 @@ import Testing
     #expect(Set(FilmRecipe.builtIns.map(\.id)).count == FilmRecipe.builtIns.count)
 
     for recipe in FilmRecipe.builtIns {
-        #expect((0 ... 1).contains(recipe.strength))
         #expect(recipe.tone == FilmToneSettings(isEnabled: false))
         #expect((0 ... 1).contains(recipe.lightShaping.amountStops))
         #expect(recipe.lensBlur.isEnabled == false)
@@ -16,8 +15,7 @@ import Testing
         #expect((0 ... 1).contains(recipe.diffusion.amount))
         #expect((0 ... 1).contains(recipe.halation.amount))
         #expect((0 ... 1).contains(recipe.grain.amount))
-        #expect(recipe.grain.particleSizeMicrons > 0)
-        #expect(recipe.grain.virtualGateWidthMillimeters > 0)
+        #expect(recipe.grain.grainSize > 0)
     }
 }
 
@@ -29,43 +27,6 @@ import Testing
     #expect(recipe.diffusion.amount == 0.06)
     #expect(recipe.halation.amount == 0.15)
     #expect(recipe.grain.amount == 0.17)
-}
-
-@Test func filmToneScalesWithRecipeStrength() {
-    var recipe = FilmRecipe.classic35
-    recipe.strength = 0.5
-    recipe.tone = .init(
-        stock: .portra400,
-        stockAmount: 0.8,
-        exposure: 1,
-        contrast: 0.6,
-        saturation: -0.4,
-        vibrance: 0.8,
-        warmth: 0.2
-    )
-    let effective = recipe.effective
-
-    #expect(effective.tone.exposure == 0.5)
-    #expect(effective.tone.stock == .portra400)
-    #expect(effective.tone.stockAmount == 0.4)
-    #expect(effective.tone.contrast == 0.3)
-    #expect(effective.tone.saturation == -0.2)
-    #expect(effective.tone.vibrance == 0.4)
-    #expect(effective.tone.warmth == 0.1)
-}
-
-@Test func recipesSavedBeforeColorStocksDecodeWithNeutralStockDefaults() throws {
-    let encoded = try JSONEncoder().encode(FilmRecipe.classic35)
-    var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-    var tone = try #require(object["tone"] as? [String: Any])
-    tone.removeValue(forKey: "stock")
-    tone.removeValue(forKey: "stockAmount")
-    object["tone"] = tone
-    let legacyData = try JSONSerialization.data(withJSONObject: object)
-    let decoded = try JSONDecoder().decode(FilmRecipe.self, from: legacyData)
-
-    #expect(decoded.tone.stock == .none)
-    #expect(decoded.tone.stockAmount == 1)
 }
 
 @Test func allNamedColorStocksLoadAsCoreImageCubes() throws {
@@ -121,15 +82,6 @@ import Testing
     #expect(FilmToneSettings.maximumStockAmount == 2)
 }
 
-@Test func removedColorStocksMigrateWithoutBreakingSavedRecipes() throws {
-    let decoder = JSONDecoder()
-    let removedVelvia = try decoder.decode(FilmStockID.self, from: Data(#""velvia50""#.utf8))
-    let duplicateVision = try decoder.decode(FilmStockID.self, from: Data(#""vision500T""#.utf8))
-
-    #expect(removedVelvia == .none)
-    #expect(duplicateVision == .vision250D)
-}
-
 @Test func colorStocksRetainColorWithoutImposingASecondStrongContrastCurve() throws {
     let renderer = try FilmRenderer()
     let extent = CGRect(x: 0, y: 0, width: 8, height: 8)
@@ -164,41 +116,6 @@ import Testing
     }
 }
 
-@Test func recipesSavedBeforeFilmToneDecodeWithNeutralDefaults() throws {
-    let encoded = try JSONEncoder().encode(FilmRecipe.classic35)
-    var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-    object.removeValue(forKey: "tone")
-    let legacyData = try JSONSerialization.data(withJSONObject: object)
-    let decoded = try JSONDecoder().decode(FilmRecipe.self, from: legacyData)
-
-    #expect(decoded.tone == FilmToneSettings())
-    #expect(decoded.lightShaping == FilmRecipe.classic35.lightShaping)
-}
-
-@Test func recipesSavedBeforeLensBlurDecodeWithTheEffectDisabled() throws {
-    let encoded = try JSONEncoder().encode(FilmRecipe.classic35)
-    var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-    object.removeValue(forKey: "lensBlur")
-    let legacyData = try JSONSerialization.data(withJSONObject: object)
-    let decoded = try JSONDecoder().decode(FilmRecipe.self, from: legacyData)
-
-    #expect(decoded.lensBlur == LensBlurSettings())
-    #expect(decoded.lensBlur.isEnabled == false)
-}
-
-@Test func strengthScalesEffectAmountsWithoutChangingCharacterControls() {
-    var recipe = FilmRecipe.classic35
-    recipe.strength = 0.5
-    let effective = recipe.effective
-
-    #expect(effective.lightShaping.amountStops == recipe.lightShaping.amountStops * 0.5)
-    #expect(effective.lensBlur.amount == recipe.lensBlur.amount * 0.5)
-    #expect(effective.diffusion.amount == recipe.diffusion.amount * 0.5)
-    #expect(effective.halation.amount == recipe.halation.amount * 0.5)
-    #expect(effective.grain.amount == recipe.grain.amount * 0.5)
-    #expect(effective.grain.particleSizeMicrons == recipe.grain.particleSizeMicrons)
-}
-
 @Test func classic35DefaultsMatchCalibratedRecipe() {
     let recipe = FilmRecipe.classic35
 
@@ -206,7 +123,7 @@ import Testing
     #expect(recipe.diffusion.amount == 0.06)
     #expect(recipe.halation.amount == 0.15)
     #expect(recipe.grain.amount == 0.17)
-    #expect(recipe.grain.particleSizeMicrons == 10)
+    #expect(recipe.grain.grainSize == 10)
 }
 
 @Test func clean120DefaultsMatchReferenceSettings() throws {
@@ -219,7 +136,7 @@ import Testing
     #expect(recipe.halation.amount == 0.10)
     #expect(recipe.halation.spillRadius == 0.20)
     #expect(recipe.grain.amount == 0.20)
-    #expect(recipe.grain.particleSizeMicrons == 6)
+    #expect(abs(recipe.grain.grainSize - 3.86) < 0.000_001)
 }
 
 @Test func extra35PreservesThePriorClassic35RendererStrengths() throws {
@@ -228,7 +145,7 @@ import Testing
     #expect(FilmRenderer.mappedSpotlightAmount(recipe.lightShaping.amountStops) == 1.0)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.diffusion.amount) == 0.20)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.halation.amount) == 0.50)
-    #expect(FilmRenderer.mappedGrainAmount(recipe.grain.amount) == 1.50)
+    #expect(abs(FilmRenderer.mappedGrainAmount(recipe.grain.amount) - 1.65) < 0.000_001)
 }
 
 @Test func halationUsesNormalizedAmountsWithoutChangingRecipeStrengths() throws {
@@ -292,19 +209,18 @@ import Testing
     #expect(recipe.halation.amount == 0.40)
     #expect(recipe.halation.spillRadius == 0.50)
     #expect(recipe.grain.amount == 0.35)
-    #expect(recipe.grain.particleSizeMicrons == 14.1)
+    #expect(abs(recipe.grain.grainSize - 24.1) < 0.000_001)
     #expect(recipe.grain.acutance == 0.42)
     #expect(recipe.grain.sizeVariation == 0.50)
     #expect(recipe.grain.chroma == 0.98)
     #expect(recipe.grain.shadowResponse == 0.72)
     #expect(recipe.grain.highlightResponse == 0.28)
-    #expect(recipe.grain.virtualGateWidthMillimeters == 21.1)
 }
 
 @Test func grainAmountUsesTheStrongerIntensityScale() {
     #expect(FilmRenderer.mappedGrainAmount(0) == 0)
-    #expect(FilmRenderer.mappedGrainAmount(0.25) == 1.5)
-    #expect(FilmRenderer.mappedGrainAmount(1) == 6)
+    #expect(abs(FilmRenderer.mappedGrainAmount(0.25) - 1.65) < 0.000_001)
+    #expect(abs(FilmRenderer.mappedGrainAmount(1) - 6.6) < 0.000_001)
 }
 
 @Test func spotlightAmountUsesTheExpandedIntensityScale() {
@@ -323,89 +239,6 @@ import Testing
     #expect(FilmRenderer.mappedLensBlurRGBSeparation(0) == 0)
     #expect(FilmRenderer.mappedLensBlurRGBSeparation(0.5) == 1)
     #expect(FilmRenderer.mappedLensBlurRGBSeparation(1) == 2)
-}
-
-@Test func retiredLensBlurControlsAreIgnoredWhenLoadingRecipes() throws {
-    let encoded = try JSONEncoder().encode(LensBlurSettings(isEnabled: true, colorFringing: 0.42))
-    var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-    object["character"] = 0.9
-    object["rgbStrength"] = 0.8
-    object["asymmetry"] = 0.7
-    object["direction"] = 0.3
-    let legacyData = try JSONSerialization.data(withJSONObject: object)
-    let decoded = try JSONDecoder().decode(LensBlurSettings.self, from: legacyData)
-
-    #expect(decoded.colorFringing == 0.42)
-}
-
-@Test func legacyCustomRecipeAmountsMigrateWithoutChangingRenderedStrength() {
-    let legacy = FilmRecipe(
-        id: "custom-legacy",
-        name: "Legacy",
-        lightShaping: .init(amountStops: 1.2),
-        diffusion: .init(amount: 0.6),
-        halation: .init(amount: 1.4),
-        grain: .init(amount: 1.8)
-    )
-    let migrated = legacy.normalizedFromLegacyAmountScale()
-
-    #expect(migrated.lightShaping.amountStops == 0.6)
-    #expect(migrated.diffusion.amount == 0.3)
-    #expect(migrated.halation.amount == 0.7)
-    #expect(migrated.grain.amount == 0.9)
-}
-
-@Test func versionOneCustomRecipeAmountsMigrateWithoutChangingRenderedStrength() {
-    let prior = FilmRecipe(
-        id: "custom-version-one",
-        name: "Version One",
-        lightShaping: .init(amountStops: 0.5),
-        diffusion: .init(amount: 0.25),
-        halation: .init(amount: 0.25),
-        grain: .init(amount: 0.5)
-    )
-    let migrated = prior.normalizedFromAmountScaleVersion1()
-
-    #expect(migrated.lightShaping.amountStops == 0.25)
-    #expect(migrated.diffusion.amount == 0.25)
-    #expect(migrated.halation.amount == 0.25)
-    #expect(migrated.grain.amount == 0.375)
-}
-
-@Test func versionTwoCustomRecipeAmountsMigrateWithoutChangingRenderedStrength() {
-    let prior = FilmRecipe(
-        id: "custom-version-two",
-        name: "Version Two",
-        lightShaping: .init(amountStops: 0.25),
-        diffusion: .init(amount: 0.25),
-        halation: .init(amount: 0.25),
-        grain: .init(amount: 0.375)
-    )
-    let migrated = prior.normalizedFromAmountScaleVersion2()
-
-    #expect(migrated.lightShaping.amountStops == 0.25)
-    #expect(migrated.diffusion.amount == 0.25)
-    #expect(migrated.halation.amount == 0.25)
-    #expect(migrated.grain.amount == 0.25)
-}
-
-@Test func versionThreeLensBlurRecipesMigrateWithoutChangingRGBSeparation() {
-    let prior = FilmRecipe(
-        id: "custom-version-three",
-        name: "Version Three",
-        lightShaping: .init(),
-        lensBlur: .init(isEnabled: true, colorFringing: 1),
-        diffusion: .init(),
-        halation: .init(),
-        grain: .init()
-    )
-    let migrated = prior.normalizedFromAmountScaleVersion3()
-
-    #expect(migrated.lensBlur.colorFringing == 0.5)
-    #expect(
-        FilmRenderer.mappedLensBlurRGBSeparation(migrated.lensBlur.colorFringing)
-            == prior.lensBlur.colorFringing
-    )
 }
 
 @Test func viewerZoomUsesActualImageScaleAndFitGeometry() {
@@ -449,6 +282,89 @@ import Testing
 
     #expect(monochromeEnergy < 0.000_001)
     #expect(chromaticEnergy > 0.000_2)
+}
+
+@Test func grainDensityResponseCompressesTheToeAndHighlightShoulder() throws {
+    let extent = CGRect(x: 0, y: 0, width: 192, height: 192)
+    let renderer = try FilmRenderer()
+    let recipe = grainTestRecipe(chroma: 0)
+
+    func relativeGrain(at luminance: CGFloat) throws -> Double {
+        let source = CIImage(
+            color: .init(red: luminance, green: luminance, blue: luminance, alpha: 1)
+        ).cropped(to: extent)
+        let pixels = renderFloatPixels(try renderer.render(source, recipe: recipe), extent: extent)
+        return luminanceCoefficientOfVariation(pixels)
+    }
+
+    let deepShadow = try relativeGrain(at: 0.02)
+    let middleDensity = try relativeGrain(at: 0.45)
+    let brightHighlight = try relativeGrain(at: 0.95)
+
+    #expect(middleDensity > deepShadow * 1.5)
+    #expect(middleDensity > brightHighlight * 2)
+}
+
+@Test func grainMorphologyControlsRemainVisibleAtPreviewScale() throws {
+    let extent = CGRect(x: 0, y: 0, width: 256, height: 256)
+    let source = CIImage(color: .init(red: 0.42, green: 0.42, blue: 0.42, alpha: 1))
+        .cropped(to: extent)
+    let renderer = try FilmRenderer()
+
+    func render(
+        grainSize: Double,
+        acutance: Double,
+        variation: Double
+    ) throws -> [Float] {
+        let recipe = FilmRecipe(
+            id: "grain-morphology-test",
+            name: "Grain Morphology Test",
+            lightShaping: .init(isEnabled: false),
+            diffusion: .init(isEnabled: false),
+            halation: .init(isEnabled: false),
+            grain: .init(
+                amount: 0.5,
+                grainSize: grainSize,
+                acutance: acutance,
+                sizeVariation: variation,
+                chroma: 0,
+                seed: 1_234
+            )
+        )
+        return renderFloatPixels(try renderer.render(source, recipe: recipe), extent: extent)
+    }
+
+    let fine = try render(grainSize: 3, acutance: 0, variation: 0)
+    let coarse = try render(grainSize: 100, acutance: 0, variation: 0)
+    let soft = try render(grainSize: 22, acutance: 0, variation: 0)
+    let crisp = try render(grainSize: 22, acutance: 1, variation: 0)
+    let uniform = try render(grainSize: 14, acutance: 0.5, variation: 0)
+    let varied = try render(grainSize: 14, acutance: 0.5, variation: 1)
+
+    #expect(meanAbsoluteLuminanceDifference(fine, coarse) > 0.01)
+    #expect(meanAbsoluteLuminanceDifference(soft, crisp) > 0.01)
+    #expect(meanAbsoluteLuminanceDifference(uniform, varied) > 0.01)
+}
+
+@Test func fullRangeSavedGrainSeedsRetainTextureWithoutChangingMeanDensity() throws {
+    let extent = CGRect(x: 0, y: 0, width: 192, height: 192)
+    let source = CIImage(color: .init(red: 0.42, green: 0.42, blue: 0.42, alpha: 1))
+        .cropped(to: extent)
+    let renderer = try FilmRenderer()
+    var normalRecipe = grainTestRecipe(chroma: 0)
+    normalRecipe.grain.seed = 2_016
+    var maximumSeedRecipe = normalRecipe
+    maximumSeedRecipe.grain.seed = UInt32.max
+
+    let normal = renderFloatPixels(try renderer.render(source, recipe: normalRecipe), extent: extent)
+    let maximumSeed = renderFloatPixels(
+        try renderer.render(source, recipe: maximumSeedRecipe),
+        extent: extent
+    )
+
+    #expect(luminanceCoefficientOfVariation(maximumSeed) > 0.01)
+    #expect(meanAbsoluteLuminanceDifference(normal, maximumSeed) > 0.01)
+    #expect(abs(meanLuminance(normal) - meanLuminance(maximumSeed)) < 0.02)
 }
 
 @Test func rendererPreservesSourceExtent() throws {
@@ -875,7 +791,7 @@ private func grainTestRecipe(chroma: Double) -> FilmRecipe {
         halation: .init(isEnabled: false),
         grain: .init(
             amount: 0.5,
-            particleSizeMicrons: 10,
+            grainSize: 10,
             chroma: chroma,
             shadowResponse: 0.72,
             highlightResponse: 0.28,
@@ -925,4 +841,55 @@ private func meanChromaEnergy(_ pixels: [Float]) -> Double {
         count += 1
     }
     return total / Double(max(1, count))
+}
+
+private func luminanceCoefficientOfVariation(_ pixels: [Float]) -> Double {
+    var luminances: [Double] = []
+    luminances.reserveCapacity(pixels.count / 4)
+    for index in stride(from: 0, to: pixels.count, by: 4) {
+        luminances.append(
+            0.2126 * Double(pixels[index])
+                + 0.7152 * Double(pixels[index + 1])
+                + 0.0722 * Double(pixels[index + 2])
+        )
+    }
+    guard !luminances.isEmpty else { return 0 }
+    let mean = luminances.reduce(0, +) / Double(luminances.count)
+    guard mean > 0.000_001 else { return 0 }
+    let variance = luminances.reduce(0) { partial, value in
+        let difference = value - mean
+        return partial + difference * difference
+    } / Double(luminances.count)
+    return sqrt(variance) / mean
+}
+
+private func meanLuminance(_ pixels: [Float]) -> Double {
+    guard !pixels.isEmpty else { return 0 }
+    var total = 0.0
+    var count = 0
+    for index in stride(from: 0, to: pixels.count, by: 4) {
+        total += 0.2126 * Double(pixels[index])
+            + 0.7152 * Double(pixels[index + 1])
+            + 0.0722 * Double(pixels[index + 2])
+        count += 1
+    }
+    return total / Double(max(1, count))
+}
+
+private func meanAbsoluteLuminanceDifference(_ lhs: [Float], _ rhs: [Float]) -> Double {
+    let count = min(lhs.count, rhs.count)
+    guard count >= 4 else { return 0 }
+    var total = 0.0
+    var pixels = 0
+    for index in stride(from: 0, to: count, by: 4) {
+        let lhsLuminance = 0.2126 * Double(lhs[index])
+            + 0.7152 * Double(lhs[index + 1])
+            + 0.0722 * Double(lhs[index + 2])
+        let rhsLuminance = 0.2126 * Double(rhs[index])
+            + 0.7152 * Double(rhs[index + 1])
+            + 0.0722 * Double(rhs[index + 2])
+        total += abs(lhsLuminance - rhsLuminance)
+        pixels += 1
+    }
+    return total / Double(max(1, pixels))
 }

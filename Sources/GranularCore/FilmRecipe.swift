@@ -36,29 +36,6 @@ public enum FilmStockID: String, CaseIterable, Codable, Hashable, Sendable {
         }
     }
 
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let storedValue = try container.decode(String.self)
-        switch storedValue {
-        case "vision500T":
-            self = .vision250D
-        case "velvia50":
-            self = .none
-        default:
-            guard let stock = Self(rawValue: storedValue) else {
-                throw DecodingError.dataCorruptedError(
-                    in: container,
-                    debugDescription: "Unknown Granular color stock: \(storedValue)"
-                )
-            }
-            self = stock
-        }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(rawValue)
-    }
 }
 
 public struct FilmToneSettings: Codable, Hashable, Sendable {
@@ -106,28 +83,6 @@ public struct FilmToneSettings: Codable, Hashable, Sendable {
             || warmth != 0
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case isEnabled
-        case stock
-        case stockAmount
-        case exposure
-        case contrast
-        case saturation
-        case vibrance
-        case warmth
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
-        stock = try container.decodeIfPresent(FilmStockID.self, forKey: .stock) ?? .none
-        stockAmount = try container.decodeIfPresent(Double.self, forKey: .stockAmount) ?? 1
-        exposure = try container.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
-        contrast = try container.decodeIfPresent(Double.self, forKey: .contrast) ?? 0
-        saturation = try container.decodeIfPresent(Double.self, forKey: .saturation) ?? 0
-        vibrance = try container.decodeIfPresent(Double.self, forKey: .vibrance) ?? 0
-        warmth = try container.decodeIfPresent(Double.self, forKey: .warmth) ?? 0
-    }
 }
 
 public struct LightShapingSettings: Codable, Hashable, Sendable {
@@ -189,24 +144,6 @@ public struct LensBlurSettings: Codable, Hashable, Sendable {
         self.focusY = focusY
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case isEnabled
-        case amount
-        case falloff
-        case colorFringing
-        case focusX
-        case focusY
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? false
-        amount = try container.decodeIfPresent(Double.self, forKey: .amount) ?? 0.25
-        falloff = try container.decodeIfPresent(Double.self, forKey: .falloff) ?? 0.55
-        colorFringing = try container.decodeIfPresent(Double.self, forKey: .colorFringing) ?? 0.075
-        focusX = try container.decodeIfPresent(Double.self, forKey: .focusX) ?? 0.5
-        focusY = try container.decodeIfPresent(Double.self, forKey: .focusY) ?? 0.5
-    }
 }
 
 public struct DiffusionSettings: Codable, Hashable, Sendable {
@@ -218,8 +155,6 @@ public struct DiffusionSettings: Codable, Hashable, Sendable {
     public var veil: Double
     public var sourceBias: Double
     public var warmth: Double
-    public var focusX: Double
-    public var focusY: Double
 
     public init(
         isEnabled: Bool = true,
@@ -227,9 +162,7 @@ public struct DiffusionSettings: Codable, Hashable, Sendable {
         bloom: Double = 0.35,
         veil: Double = 0.1,
         sourceBias: Double = 0.25,
-        warmth: Double = 0,
-        focusX: Double = 0.5,
-        focusY: Double = 0.5
+        warmth: Double = 0
     ) {
         self.isEnabled = isEnabled
         self.amount = amount
@@ -237,8 +170,6 @@ public struct DiffusionSettings: Codable, Hashable, Sendable {
         self.veil = veil
         self.sourceBias = sourceBias
         self.warmth = warmth
-        self.focusX = focusX
-        self.focusY = focusY
     }
 }
 
@@ -277,36 +208,33 @@ public struct GrainSettings: Codable, Hashable, Sendable {
 
     public var isEnabled: Bool
     public var amount: Double
-    public var particleSizeMicrons: Double
+    public var grainSize: Double
     public var acutance: Double
     public var sizeVariation: Double
     public var chroma: Double
     public var shadowResponse: Double
     public var highlightResponse: Double
-    public var virtualGateWidthMillimeters: Double
     public var seed: UInt32
 
     public init(
         isEnabled: Bool = true,
         amount: Double = 0.25,
-        particleSizeMicrons: Double = 9,
+        grainSize: Double = 9,
         acutance: Double = 0.55,
         sizeVariation: Double = 0.25,
         chroma: Double = 0.12,
         shadowResponse: Double = 0.72,
         highlightResponse: Double = 0.28,
-        virtualGateWidthMillimeters: Double = 36,
         seed: UInt32 = 2_016
     ) {
         self.isEnabled = isEnabled
         self.amount = amount
-        self.particleSizeMicrons = particleSizeMicrons
+        self.grainSize = grainSize
         self.acutance = acutance
         self.sizeVariation = sizeVariation
         self.chroma = chroma
         self.shadowResponse = shadowResponse
         self.highlightResponse = highlightResponse
-        self.virtualGateWidthMillimeters = virtualGateWidthMillimeters
         self.seed = seed
     }
 }
@@ -314,7 +242,6 @@ public struct GrainSettings: Codable, Hashable, Sendable {
 public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
     public var id: String
     public var name: String
-    public var strength: Double
     public var tone: FilmToneSettings
     public var lightShaping: LightShapingSettings
     public var lensBlur: LensBlurSettings
@@ -325,7 +252,6 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
     public init(
         id: String,
         name: String,
-        strength: Double = 1,
         tone: FilmToneSettings = .init(),
         lightShaping: LightShapingSettings,
         lensBlur: LensBlurSettings = .init(),
@@ -335,7 +261,6 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.name = name
-        self.strength = strength
         self.tone = tone
         self.lightShaping = lightShaping
         self.lensBlur = lensBlur
@@ -344,43 +269,6 @@ public struct FilmRecipe: Identifiable, Codable, Hashable, Sendable {
         self.grain = grain
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case strength
-        case tone
-        case lightShaping
-        case lensBlur
-        case diffusion
-        case halation
-        case grain
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
-        strength = try container.decodeIfPresent(Double.self, forKey: .strength) ?? 1
-        tone = try container.decodeIfPresent(FilmToneSettings.self, forKey: .tone) ?? .init()
-        lightShaping = try container.decode(LightShapingSettings.self, forKey: .lightShaping)
-        lensBlur = try container.decodeIfPresent(LensBlurSettings.self, forKey: .lensBlur) ?? .init()
-        diffusion = try container.decode(DiffusionSettings.self, forKey: .diffusion)
-        halation = try container.decode(HalationSettings.self, forKey: .halation)
-        grain = try container.decode(GrainSettings.self, forKey: .grain)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(name, forKey: .name)
-        try container.encode(strength, forKey: .strength)
-        try container.encode(tone, forKey: .tone)
-        try container.encode(lightShaping, forKey: .lightShaping)
-        try container.encode(lensBlur, forKey: .lensBlur)
-        try container.encode(diffusion, forKey: .diffusion)
-        try container.encode(halation, forKey: .halation)
-        try container.encode(grain, forKey: .grain)
-    }
 }
 
 public extension FilmRecipe {
@@ -392,7 +280,7 @@ public extension FilmRecipe {
             lightShaping: .init(amountStops: 0.10, focus: 0.68),
             diffusion: .init(amount: 0.10, bloom: 0.2, veil: 0.03),
             halation: .init(amount: 0.10, spillRadius: 0.20, tail: 0.2),
-            grain: .init(amount: 0.20, particleSizeMicrons: 6, chroma: 0.05, virtualGateWidthMillimeters: 56)
+            grain: .init(amount: 0.20, grainSize: 3.86, chroma: 0.05)
         ),
         FilmRecipe(
             id: "classic-35",
@@ -401,7 +289,7 @@ public extension FilmRecipe {
             lightShaping: .init(amountStops: 0.25, focus: 0.56),
             diffusion: .init(amount: 0.06, bloom: 0.35, veil: 0.10),
             halation: .init(amount: 0.15, spillRadius: 0.35, tail: 0.35),
-            grain: .init(amount: 0.17, particleSizeMicrons: 10, chroma: 0.12)
+            grain: .init(amount: 0.17, grainSize: 10, chroma: 0.12)
         ),
         FilmRecipe(
             id: "extra-35",
@@ -410,7 +298,7 @@ public extension FilmRecipe {
             lightShaping: .init(amountStops: 0.25, focus: 0.56),
             diffusion: .init(amount: 0.10, bloom: 0.35, veil: 0.10),
             halation: .init(amount: 0.25, spillRadius: 0.35, tail: 0.35),
-            grain: .init(amount: 0.25, particleSizeMicrons: 10, chroma: 0.12)
+            grain: .init(amount: 0.25, grainSize: 10, chroma: 0.12)
         ),
         FilmRecipe(
             id: "soft-16",
@@ -421,13 +309,12 @@ public extension FilmRecipe {
             halation: .init(amount: 0.40, spillRadius: 0.5, tail: 0.52),
             grain: .init(
                 amount: 0.35,
-                particleSizeMicrons: 14.1,
+                grainSize: 24.1,
                 acutance: 0.42,
                 sizeVariation: 0.50,
                 chroma: 0.98,
                 shadowResponse: 0.72,
-                highlightResponse: 0.28,
-                virtualGateWidthMillimeters: 21.1
+                highlightResponse: 0.28
             )
         )
     ]
@@ -436,49 +323,4 @@ public extension FilmRecipe {
         builtIns.first { $0.id == "classic-35" }!
     }
 
-    var effective: FilmRecipe {
-        var result = self
-        let effectiveStrength = max(0, min(1, self.strength))
-        result.tone.stockAmount *= effectiveStrength
-        result.tone.exposure *= effectiveStrength
-        result.tone.contrast *= effectiveStrength
-        result.tone.saturation *= effectiveStrength
-        result.tone.vibrance *= effectiveStrength
-        result.tone.warmth *= effectiveStrength
-        result.lightShaping.amountStops *= effectiveStrength
-        result.lensBlur.amount *= effectiveStrength
-        result.diffusion.amount *= effectiveStrength
-        result.diffusion.veil *= effectiveStrength
-        result.halation.amount *= effectiveStrength
-        result.grain.amount *= effectiveStrength
-        return result
-    }
-
-    func normalizedFromLegacyAmountScale() -> FilmRecipe {
-        var result = self
-        result.lightShaping.amountStops /= 2
-        result.diffusion.amount /= 2
-        result.halation.amount /= 2
-        result.grain.amount /= 2
-        return result
-    }
-
-    func normalizedFromAmountScaleVersion1() -> FilmRecipe {
-        var result = self
-        result.lightShaping.amountStops /= 2
-        result.grain.amount *= 0.75
-        return result
-    }
-
-    func normalizedFromAmountScaleVersion2() -> FilmRecipe {
-        var result = self
-        result.grain.amount *= 2 / 3
-        return result
-    }
-
-    func normalizedFromAmountScaleVersion3() -> FilmRecipe {
-        var result = self
-        result.lensBlur.colorFringing /= 2
-        return result
-    }
 }
