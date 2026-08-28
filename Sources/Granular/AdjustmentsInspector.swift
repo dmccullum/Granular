@@ -190,15 +190,13 @@ private struct GrainCard: View {
             reset: reset
         ) {
             ParameterSlider("Amount", value: $settings.amount, range: 0 ... GrainSettings.maximumAmount)
-            ParameterSlider("Particle Size", value: $settings.particleSizeMicrons, range: 3 ... 22, suffix: "µm", decimals: 1)
+            ParameterSlider("Grain Size", value: $settings.grainSize, range: 2 ... 30, decimals: 1)
         } advanced: {
             ParameterSlider("Acutance", value: $settings.acutance, range: 0 ... 1)
             ParameterSlider("Size Variation", value: $settings.sizeVariation, range: 0 ... 1)
             ParameterSlider("Chroma", value: $settings.chroma, range: 0 ... 1)
             ParameterSlider("Shadow Response", value: $settings.shadowResponse, range: 0 ... 1)
             ParameterSlider("Highlight Response", value: $settings.highlightResponse, range: 0 ... 1)
-            ParameterSlider("Virtual Gate", value: $settings.virtualGateWidthMillimeters, range: 8 ... 70, suffix: "mm", decimals: 1)
-
             Button("New Grain Pattern", systemImage: "dice", action: randomize)
                 .buttonStyle(.borderless)
         }

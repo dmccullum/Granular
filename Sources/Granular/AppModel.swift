@@ -351,7 +351,7 @@ final class AppModel {
     }
 
     func randomizeGrain() {
-        recipe.grain.seed = UInt32.random(in: 1 ... UInt32.max)
+        recipe.grain.seed = UInt32.random(in: 1 ..< 1_000_003)
         schedulePreview()
     }
 
@@ -750,54 +750,9 @@ final class AppModel {
     }
 
     private func restoreRecipes() {
-        let defaults = UserDefaults.standard
-        let storedVersion = defaults.integer(forKey: RecipeKey.amountScaleVersion)
-        if storedVersion < 4 {
-            migrateWorkingRecipeRGBSeparation(in: defaults)
-        }
-        guard let data = defaults.data(forKey: RecipeKey.saved) else {
-            defaults.set(RecipeKey.currentAmountScaleVersion, forKey: RecipeKey.amountScaleVersion)
-            return
-        }
-        guard let decoded = try? JSONDecoder().decode([FilmRecipe].self, from: data) else { return }
-
-        if storedVersion < RecipeKey.currentAmountScaleVersion {
-            var migrated = decoded
-            if storedVersion < 1 {
-                migrated = migrated.map { $0.normalizedFromLegacyAmountScale() }
-            }
-            if storedVersion < 2 {
-                migrated = migrated.map { $0.normalizedFromAmountScaleVersion1() }
-            }
-            if storedVersion < 3 {
-                migrated = migrated.map { $0.normalizedFromAmountScaleVersion2() }
-            }
-            if storedVersion < 4,
-               let objects = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-                migrated = migrated.enumerated().map { index, recipe in
-                    guard objects.indices.contains(index), objects[index]["lensBlur"] != nil else {
-                        return recipe
-                    }
-                    return recipe.normalizedFromAmountScaleVersion3()
-                }
-            }
-            savedRecipes = migrated
-            persistRecipes()
-            defaults.set(RecipeKey.currentAmountScaleVersion, forKey: RecipeKey.amountScaleVersion)
-        } else {
-            savedRecipes = decoded
-        }
-    }
-
-    private func migrateWorkingRecipeRGBSeparation(in defaults: UserDefaults) {
-        guard let data = defaults.data(forKey: RecipeKey.working),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              object["lensBlur"] != nil,
-              let decoded = try? JSONDecoder().decode(FilmRecipe.self, from: data),
-              let migrated = try? JSONEncoder().encode(decoded.normalizedFromAmountScaleVersion3()) else {
-            return
-        }
-        defaults.set(migrated, forKey: RecipeKey.working)
+        guard let data = UserDefaults.standard.data(forKey: RecipeKey.saved),
+              let decoded = try? JSONDecoder().decode([FilmRecipe].self, from: data) else { return }
+        savedRecipes = decoded
     }
 
     private func persistRecipes() {
@@ -873,11 +828,8 @@ private enum BookmarkKey {
 }
 
 private enum RecipeKey {
-    // Keep the original storage keys so existing user-created recipes survive the terminology change.
-    static let saved = "presets.saved"
-    static let amountScaleVersion = "presets.amountScaleVersion"
+    static let saved = "recipes.saved"
     static let selectedID = "recipes.selectedID"
     static let working = "recipes.working"
     static let isModified = "recipes.isModified"
-    static let currentAmountScaleVersion = 4
 }

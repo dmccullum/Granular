@@ -89,7 +89,6 @@ public final class FilmRenderer: @unchecked Sendable {
     }
 
     public func render(_ source: CIImage, recipe: FilmRecipe) throws -> CIImage {
-        let recipe = recipe.effective
         let extent = source.extent.integral
         guard !extent.isEmpty else { throw FilmRendererError.renderFailed }
 
@@ -383,12 +382,19 @@ public final class FilmRenderer: @unchecked Sendable {
         extent: CGRect
     ) throws -> CIImage {
         let particlePixels = max(
-            0.65,
-            min(10, extent.width * settings.particleSizeMicrons / (settings.virtualGateWidthMillimeters * 1_000))
+            0.20,
+            min(10, extent.width * settings.grainSize / 36_000)
         )
+        // Film granularity follows the density of a small surrounding area, not the
+        // brightness of each finished pixel in isolation. A softly resolved guide
+        // keeps fine edges and specular detail from visibly switching grain regimes.
+        let shortEdge = min(extent.width, extent.height)
+        let densityGuideRadius = max(2, min(16, max(particlePixels * 2.25, shortEdge * 0.0015)))
+        let densityGuide = gaussianBlur(image, radius: densityGuideRadius, extent: extent)
 
         let arguments: [Any] = [
             image,
+            densityGuide,
             CIVector(cgRect: extent),
             Float(Self.mappedGrainAmount(settings.amount)),
             Float(particlePixels),
@@ -397,7 +403,7 @@ public final class FilmRenderer: @unchecked Sendable {
             Float(settings.chroma),
             Float(settings.shadowResponse),
             Float(settings.highlightResponse),
-            Float(settings.seed)
+            Self.mappedGrainSeed(settings.seed)
         ]
         guard let output = grainKernel.apply(extent: extent, arguments: arguments) else {
             throw FilmRendererError.renderFailed
@@ -406,7 +412,14 @@ public final class FilmRenderer: @unchecked Sendable {
     }
 
     static func mappedGrainAmount(_ amount: Double) -> Double {
-        min(1, max(0, amount)) * 6
+        min(1, max(0, amount)) * 6.6
+    }
+
+    static func mappedGrainSeed(_ seed: UInt32) -> Float {
+        // Core Image Kernel Language receives scalar arguments as 32-bit floats.
+        // Keeping the phase bounded prevents large UInt32 values from collapsing
+        // nearby hash inputs into the same representable number on the GPU.
+        Float(seed % 1_000_003)
     }
 
     private func gaussianBlur(_ image: CIImage, radius: CGFloat, extent: CGRect) -> CIImage {
@@ -862,7 +875,7 @@ private extension FilmRenderer {
         return (a + b + c - 1.5) * 0.36;
     }
 
-    float filmParticleNoise(vec2 coordinate, vec2 pixel, float particlePixels, float seed) {
+    float filmParticleNoise(vec2 coordinate, vec2 pixel, float particlePixels, float acutance, float seed) {
         // At normal still-image grain sizes a fresh, distribution-shaped sample per
         // output pixel avoids the lattice and cloudy clumps produced by interpolated
         // value noise. As particles become visibly larger, gently blend in two
@@ -880,43 +893,82 @@ private extension FilmRenderer {
         float fieldA = filmNoise(rotatedA + vec2(19.7, 7.3), seed + 41.0) - 0.5;
         float fieldB = filmNoise(rotatedB * 1.173 + vec2(5.1, 23.9), seed + 197.0) - 0.5;
         float correlated = (fieldA * 0.58 + fieldB * 0.42) * 1.52;
-        float correlation = smoothstep(0.9, 2.8, particlePixels);
+        // Start resolving particle scale below one output pixel. This is important
+        // for the live preview, where physically small grains would otherwise all
+        // collapse to the same single-pixel pattern.
+        // Acutance changes how distinctly individual grains resolve: lower values
+        // favor the softly correlated dye-cloud fields, while higher values retain
+        // more independent, high-frequency particles. Center the offset around the
+        // recipe default so existing looks keep their morphology.
+        float baseCorrelation = smoothstep(0.22, 1.55, particlePixels);
+        float acutanceOffset = mix(0.38, -0.28, clamp(acutance, 0.0, 1.0));
+        float correlation = clamp(baseCorrelation + acutanceOffset, 0.0, 1.0);
         return mix(independent, correlated, correlation);
     }
 
-    kernel vec4 grain(__sample source, vec4 extent, float amount, float particlePixels, float acutance, float variation, float chroma, float shadowResponse, float highlightResponse, float seed) {
+    kernel vec4 grain(__sample source, __sample densityGuide, vec4 extent, float amount, float particlePixels, float acutance, float variation, float chroma, float shadowResponse, float highlightResponse, float seed) {
         vec2 coordinate = (destCoord() - extent.xy) / max(particlePixels, 0.5);
         vec2 pixel = floor(destCoord());
-        float primary = filmParticleNoise(coordinate, pixel, particlePixels, seed);
-        float alternateScale = mix(1.32, 0.74, clamp(variation, 0.0, 1.0));
+        float primary = filmParticleNoise(coordinate, pixel, particlePixels, acutance, seed);
+        float variationAmount = clamp(variation, 0.0, 1.0);
+        float alternateScale = mix(1.0, 0.52, variationAmount);
         float varied = filmParticleNoise(
             coordinate * alternateScale + vec2(13.7, 29.1),
             pixel + vec2(47.0, 31.0),
             particlePixels / alternateScale,
+            acutance,
             seed + 431.0
         );
-        float crisp = filmTriangularNoise(pixel + vec2(71.0, 43.0), seed + 887.0);
-        float variationMix = 0.04 + clamp(variation, 0.0, 1.0) * 0.16;
-        float densityNoise = primary * (0.88 - variationMix * 0.35) + varied * variationMix + crisp * acutance * 0.08;
+        // Size Variation introduces a genuinely broader second population instead
+        // of merely nudging the original scale. Normalize both blends so these
+        // character controls reshape grain without acting like hidden Amount knobs.
+        float variationMix = variationAmount * 0.44;
+        float variationNormalization = 1.0 / sqrt(
+            max(0.2, (1.0 - variationMix) * (1.0 - variationMix) + variationMix * variationMix)
+        );
+        float densityNoise = mix(primary, varied, variationMix) * variationNormalization;
 
-        float luminance = max(0.00001, dot(source.rgb, vec3(0.2126, 0.7152, 0.0722)));
-        float shadowWeight = pow(clamp(1.0 - luminance, 0.0, 1.0), 0.62);
-        float tonalResponse = mix(highlightResponse, shadowResponse, shadowWeight);
+        float localLuminance = clamp(
+            dot(max(densityGuide.rgb, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722)),
+            0.0,
+            1.0
+        );
+        float shadowWeight = pow(1.0 - localLuminance, 0.72);
+        float endpointResponse = mix(highlightResponse, shadowResponse, shadowWeight);
+
+        // A developed negative does not become progressively noisier all the way to
+        // display black. Granularity is most legible through the useful density range,
+        // then compresses through both the toe and shoulder. Keep a small residual at
+        // either end so the image never turns unnaturally clean.
+        float toeTransition = smoothstep(0.015, 0.16, localLuminance);
+        float toeCompression = mix(0.38, 1.0, toeTransition);
+        float shoulderTransition = smoothstep(0.68, 1.0, localLuminance);
+        float shoulderCompression = mix(1.0, 0.42, shoulderTransition);
+        float midtoneOccupancy = pow(max(0.0, 4.0 * localLuminance * (1.0 - localLuminance)), 0.65);
+        float densityStructure = mix(0.82, 1.10, midtoneOccupancy);
+        float tonalResponse = endpointResponse * toeCompression * shoulderCompression * densityStructure;
         float sigma = amount * tonalResponse * 0.34;
         float densityDelta = densityNoise * sigma;
         float densityCompensation = 0.10 * sigma * sigma;
         float luminanceScale = exp2(-(densityDelta + densityCompensation) * 3.321928);
 
         vec3 chromaNoise = vec3(
-            filmParticleNoise(coordinate * 0.91 + vec2(3.1, 7.7), pixel + vec2(7.0, 61.0), particlePixels / 0.91, seed + 151.0),
-            filmParticleNoise(coordinate * 1.07 + vec2(11.2, 2.4), pixel + vec2(59.0, 13.0), particlePixels / 1.07, seed + 263.0),
-            filmParticleNoise(coordinate * 0.83 + vec2(5.8, 13.9), pixel + vec2(23.0, 79.0), particlePixels / 0.83, seed + 379.0)
+            filmParticleNoise(coordinate * 0.91 + vec2(3.1, 7.7), pixel + vec2(7.0, 61.0), particlePixels / 0.91, acutance, seed + 151.0),
+            filmParticleNoise(coordinate * 1.07 + vec2(11.2, 2.4), pixel + vec2(59.0, 13.0), particlePixels / 1.07, acutance, seed + 263.0),
+            filmParticleNoise(coordinate * 0.83 + vec2(5.8, 13.9), pixel + vec2(23.0, 79.0), particlePixels / 0.83, acutance, seed + 379.0)
         );
         // Independent dye-layer variation is separated from the shared silver-density
         // component and made luminance-neutral so Chroma changes color texture rather
         // than overall grain contrast.
         chromaNoise -= vec3(dot(chromaNoise, vec3(0.2126, 0.7152, 0.0722)));
-        float chromaStrength = amount * clamp(chroma, 0.0, 1.0) * tonalResponse * 0.50;
+        // The separate dye records are least convincing when they sparkle in blocked
+        // shadows or nearly white highlights. Let their small differences live mostly
+        // in the printable density range while the shared silver-density texture
+        // continues softly into the extremes.
+        float dyeToe = smoothstep(0.055, 0.24, localLuminance);
+        float dyeShoulder = 1.0 - smoothstep(0.70, 0.97, localLuminance);
+        float dyeCloudResponse = mix(0.16, 1.0, dyeToe * dyeShoulder);
+        float chromaStrength = amount * clamp(chroma, 0.0, 1.0) * tonalResponse * dyeCloudResponse * 0.50;
         vec3 colorScale = max(vec3(0.05), vec3(1.0) + chromaNoise * chromaStrength);
         vec3 rgb = max(vec3(0.0), source.rgb * luminanceScale * colorScale);
         return vec4(rgb, source.a);
