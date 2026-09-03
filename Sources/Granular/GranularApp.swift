@@ -32,6 +32,7 @@ struct GranularDesktopApp: App {
         .restorationBehavior(.disabled)
         .commands {
             AboutCommands()
+            MainWindowCommands()
             ViewerCommands(model: model)
 
             CommandGroup(after: .newItem) {
@@ -116,6 +117,20 @@ struct GranularDesktopApp: App {
                 .environment(model)
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+private struct MainWindowCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .windowList) {
+            Button("Granular") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "main")
+            }
+            .keyboardShortcut("0", modifiers: [.command])
+        }
     }
 }
 
