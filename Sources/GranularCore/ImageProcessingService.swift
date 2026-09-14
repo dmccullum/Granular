@@ -16,7 +16,9 @@ public actor ImageProcessingService {
         maximumDimension: CGFloat = 1_600
     ) throws -> Data {
         let source = try renderer.loadImage(at: sourceURL)
-        let rendered = try renderer.render(source, recipe: recipe)
+        let rendered = try renderer.render(
+            source, recipe: recipe, previewMaximumDimension: maximumDimension
+        )
         return try exporter.previewData(for: rendered, maximumDimension: maximumDimension)
     }
 

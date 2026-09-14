@@ -88,8 +88,12 @@ public final class FilmRenderer: @unchecked Sendable {
         return image
     }
 
-    public func render(_ source: CIImage, recipe: FilmRecipe) throws -> CIImage {
-        let extent = source.extent.integral
+    public func render(
+        _ source: CIImage,
+        recipe: FilmRecipe,
+        previewMaximumDimension: CGFloat? = nil
+    ) throws -> CIImage {
+        var extent = source.extent.integral
         guard !extent.isEmpty else { throw FilmRendererError.renderFailed }
 
         var image = source
@@ -113,6 +117,15 @@ public final class FilmRenderer: @unchecked Sendable {
         }
         if recipe.halation.isEnabled, recipe.halation.amount != 0 {
             image = try applyHalation(image, settings: recipe.halation, extent: extent)
+        }
+        // Resolve optical effects at source resolution, then generate grain on
+        // the final preview grid so downsampling does not dilute its contrast.
+        if let maximumDimension = previewMaximumDimension, maximumDimension > 0 {
+            let scale = min(1, maximumDimension / max(extent.width, extent.height))
+            if scale < 1 {
+                image = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                extent = image.extent.integral
+            }
         }
         if recipe.grain.isEnabled, recipe.grain.amount != 0 {
             image = try applyGrain(image, settings: recipe.grain, extent: extent)
@@ -412,7 +425,7 @@ public final class FilmRenderer: @unchecked Sendable {
     }
 
     static func mappedGrainAmount(_ amount: Double) -> Double {
-        min(1, max(0, amount)) * 6.6
+        min(1, max(0, amount)) * 5.28
     }
 
     static func mappedGrainSeed(_ seed: UInt32) -> Float {
@@ -850,11 +863,26 @@ private extension FilmRenderer {
     }
     """#
 
-    static let grainSource = #"""
-    float filmHash(vec2 p, float seed) {
-        return fract(sin(dot(p, vec2(127.1, 311.7)) + seed * 0.0137) * 43758.5453123);
-    }
+}
 
+extension FilmRenderer {
+    static let grainHashSource = #"""
+    float filmHash(vec2 p, float seed) {
+        // Mix bounded fractional values instead of amplifying GPU-dependent sin
+        // approximations. Split the seed so large phases do not swallow pixel
+        // differences before the mix. Exact patterns may still vary by GPU.
+        vec2 phase = vec2(mod(seed, 1024.0), floor(seed / 1024.0));
+        vec3 h = fract(vec3(p.x + phase.x, p.y + phase.y, p.x + phase.y)
+            * vec3(0.1031, 0.1030, 0.0973));
+        h += dot(h, h.yzx + 33.33);
+        return fract((h.x + h.y) * h.z);
+    }
+    """#
+
+}
+
+private extension FilmRenderer {
+    static let grainSource = grainHashSource + "\n" + #"""
     float filmNoise(vec2 p, float seed) {
         vec2 cell = floor(p);
         vec2 f = fract(p);
@@ -903,7 +931,13 @@ private extension FilmRenderer {
         float baseCorrelation = smoothstep(0.22, 1.55, particlePixels);
         float acutanceOffset = mix(0.38, -0.28, clamp(acutance, 0.0, 1.0));
         float correlation = clamp(baseCorrelation + acutanceOffset, 0.0, 1.0);
-        return mix(independent, correlated, correlation);
+        // Independent samples have variance 0.0324; the two smoothstep fields
+        // have approximately 0.05449. Normalize the blend to the latter so
+        // resolution changes its structure without also changing Amount.
+        float independentWeight = 1.0 - correlation;
+        float blendVariance = independentWeight * independentWeight * 0.0324
+            + correlation * correlation * 0.05449;
+        return mix(independent, correlated, correlation) * sqrt(0.05449 / blendVariance);
     }
 
     kernel vec4 grain(__sample source, __sample densityGuide, vec4 extent, float amount, float particlePixels, float acutance, float variation, float chroma, float shadowResponse, float highlightResponse, float seed) {

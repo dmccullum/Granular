@@ -145,7 +145,7 @@ import Testing
     #expect(FilmRenderer.mappedSpotlightAmount(recipe.lightShaping.amountStops) == 1.0)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.diffusion.amount) == 0.20)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.halation.amount) == 0.50)
-    #expect(abs(FilmRenderer.mappedGrainAmount(recipe.grain.amount) - 1.65) < 0.000_001)
+    #expect(abs(FilmRenderer.mappedGrainAmount(recipe.grain.amount) - 1.32) < 0.000_001)
 }
 
 @Test func halationUsesNormalizedAmountsWithoutChangingRecipeStrengths() throws {
@@ -217,10 +217,53 @@ import Testing
     #expect(recipe.grain.highlightResponse == 0.28)
 }
 
-@Test func grainAmountUsesTheStrongerIntensityScale() {
+@Test func grainAmountUsesTheCalibratedIntensityScale() {
     #expect(FilmRenderer.mappedGrainAmount(0) == 0)
-    #expect(abs(FilmRenderer.mappedGrainAmount(0.25) - 1.65) < 0.000_001)
-    #expect(abs(FilmRenderer.mappedGrainAmount(1) - 6.6) < 0.000_001)
+    #expect(abs(FilmRenderer.mappedGrainAmount(0.25) - 1.32) < 0.000_001)
+    #expect(abs(FilmRenderer.mappedGrainAmount(1) - 5.28) < 0.000_001)
+}
+
+@Test func grainRandomFieldHasNoStrongDirectionalCorrelation() throws {
+    // Exercise the actual GPU hash at photo-sized coordinates, including large
+    // seeds. Small images alone can miss the diagonal bands seen in exports.
+    let kernel = try #require(CIColorKernel(source: FilmRenderer.grainHashSource + "\n" + """
+        kernel vec4 randomField(float seed) {
+            float value = filmHash(floor(destCoord()), seed);
+            return vec4(value, value, value, 1.0);
+        }
+        """))
+    let side = 256
+    for origin in [CGPoint.zero, CGPoint(x: 5500, y: 3500)] {
+        let extent = CGRect(origin: origin, size: CGSize(width: side, height: side))
+        for seed: UInt32 in [1234, 999_999, UInt32.max] {
+            let field = try #require(kernel.apply(
+                extent: extent, arguments: [FilmRenderer.mappedGrainSeed(seed)]
+            ))
+            let pixels = renderFloatPixels(field, extent: extent)
+            let values = stride(from: 0, to: pixels.count, by: 4).map { Double(pixels[$0]) }
+            let mean = values.reduce(0, +) / Double(values.count)
+            var variance = 0.0
+            for value in values {
+                let delta = value - mean
+                variance += delta * delta
+            }
+            variance /= Double(values.count)
+            #expect(abs(mean - 0.5) < 0.02)
+            #expect(variance > 0.07 && variance < 0.095)
+            for (dx, dy) in [(1, 0), (0, 1), (1, 1), (-1, 1), (3, 1), (1, 3), (8, 0), (0, 8)] {
+                var covariance = 0.0
+                var count = 0
+                for y in 0 ..< side - dy {
+                    for x in max(0, -dx) ..< min(side, side - dx) {
+                        covariance += (values[y * side + x] - mean)
+                            * (values[(y + dy) * side + x + dx] - mean)
+                        count += 1
+                    }
+                }
+                #expect(abs(covariance / Double(count) / variance) < 0.05)
+            }
+        }
+    }
 }
 
 @Test func spotlightAmountUsesTheExpandedIntensityScale() {
@@ -344,6 +387,29 @@ import Testing
     #expect(meanAbsoluteLuminanceDifference(fine, coarse) > 0.01)
     #expect(meanAbsoluteLuminanceDifference(soft, crisp) > 0.01)
     #expect(meanAbsoluteLuminanceDifference(uniform, varied) > 0.01)
+}
+
+@Test func grainStrengthRemainsStableAcrossImageResolutions() throws {
+    let renderer = try FilmRenderer()
+    let sampleExtent = CGRect(x: 0, y: 0, width: 256, height: 256)
+    for size in [3.86, 10.0, 24.1] {
+        var native: [Double] = []
+        var fitted: [Double] = []
+        for width in [1600, 3000, 6000] {
+            let extent = CGRect(x: 0, y: 0, width: width, height: width * 2 / 3)
+            let source = CIImage(color: .init(red: 0.42, green: 0.42, blue: 0.42, alpha: 1))
+                .cropped(to: extent)
+            var recipe = grainTestRecipe(chroma: 0)
+            recipe.grain.grainSize = size
+            let rendered = try renderer.render(source, recipe: recipe)
+            native.append(luminanceCoefficientOfVariation(renderFloatPixels(rendered, extent: sampleExtent)))
+            let preview = try renderer.render(source, recipe: recipe, previewMaximumDimension: 1600)
+            #expect(preview.extent.width == 1600)
+            fitted.append(luminanceCoefficientOfVariation(renderFloatPixels(preview, extent: sampleExtent)))
+        }
+        #expect(native.max()! / native.min()! < 1.2)
+        #expect(fitted.max()! / fitted.min()! < 1.2)
+    }
 }
 
 @Test func fullRangeSavedGrainSeedsRetainTextureWithoutChangingMeanDensity() throws {
