@@ -62,6 +62,10 @@ sips -z 512 512 "$ICON_SOURCE" --out "$ICONSET/icon_512x512.png" >/dev/null
 cp "$ICON_SOURCE" "$ICONSET/icon_512x512@2x.png"
 iconutil --convert icns --output "$CONTENTS/Resources/AppIcon.icns" "$ICONSET"
 
+# Copied resources and generated icons can carry Finder metadata or resource
+# forks that codesign rejects. Clean the assembled bundle before signing it.
+/usr/bin/xattr -cr "$APP"
+
 codesign \
     --force \
     --deep \
