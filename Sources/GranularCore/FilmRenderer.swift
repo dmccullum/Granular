@@ -425,7 +425,7 @@ public final class FilmRenderer: @unchecked Sendable {
     }
 
     static func mappedGrainAmount(_ amount: Double) -> Double {
-        min(1, max(0, amount)) * 5.28
+        min(1, max(0, amount)) * 4.224
     }
 
     static func mappedGrainSeed(_ seed: UInt32) -> Float {

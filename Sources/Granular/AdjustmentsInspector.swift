@@ -190,7 +190,7 @@ private struct GrainCard: View {
             reset: reset
         ) {
             ParameterSlider("Amount", value: $settings.amount, range: 0 ... GrainSettings.maximumAmount)
-            ParameterSlider("Grain Size", value: $settings.grainSize, range: 2 ... 30, decimals: 1)
+            ParameterSlider("Grain Size", value: $settings.grainSize, range: 2 ... GrainSettings.maximumGrainSize, decimals: 1)
         } advanced: {
             ParameterSlider("Acutance", value: $settings.acutance, range: 0 ... 1)
             ParameterSlider("Size Variation", value: $settings.sizeVariation, range: 0 ... 1)

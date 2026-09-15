@@ -205,6 +205,7 @@ public struct HalationSettings: Codable, Hashable, Sendable {
 
 public struct GrainSettings: Codable, Hashable, Sendable {
     public static let maximumAmount = 1.0
+    public static let maximumGrainSize = 60.0
 
     public var isEnabled: Bool
     public var amount: Double
@@ -280,7 +281,7 @@ public extension FilmRecipe {
             lightShaping: .init(amountStops: 0.10, focus: 0.68),
             diffusion: .init(amount: 0.10, bloom: 0.2, veil: 0.03),
             halation: .init(amount: 0.10, spillRadius: 0.20, tail: 0.2),
-            grain: .init(amount: 0.20, grainSize: 3.86, chroma: 0.05)
+            grain: .init(amount: 0.15, grainSize: 3.86, chroma: 0.05)
         ),
         FilmRecipe(
             id: "classic-35",
@@ -308,8 +309,8 @@ public extension FilmRecipe {
             diffusion: .init(amount: 0.40, bloom: 0.50, veil: 0.16),
             halation: .init(amount: 0.40, spillRadius: 0.5, tail: 0.52),
             grain: .init(
-                amount: 0.35,
-                grainSize: 24.1,
+                amount: 0.25,
+                grainSize: 30,
                 acutance: 0.42,
                 sizeVariation: 0.50,
                 chroma: 0.98,

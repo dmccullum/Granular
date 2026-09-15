@@ -135,7 +135,7 @@ import Testing
     #expect(recipe.diffusion.bloom == 0.20)
     #expect(recipe.halation.amount == 0.10)
     #expect(recipe.halation.spillRadius == 0.20)
-    #expect(recipe.grain.amount == 0.20)
+    #expect(recipe.grain.amount == 0.15)
     #expect(abs(recipe.grain.grainSize - 3.86) < 0.000_001)
 }
 
@@ -145,7 +145,7 @@ import Testing
     #expect(FilmRenderer.mappedSpotlightAmount(recipe.lightShaping.amountStops) == 1.0)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.diffusion.amount) == 0.20)
     #expect(FilmRenderer.mappedOpticalAmount(recipe.halation.amount) == 0.50)
-    #expect(abs(FilmRenderer.mappedGrainAmount(recipe.grain.amount) - 1.32) < 0.000_001)
+    #expect(abs(FilmRenderer.mappedGrainAmount(recipe.grain.amount) - 1.056) < 0.000_001)
 }
 
 @Test func halationUsesNormalizedAmountsWithoutChangingRecipeStrengths() throws {
@@ -208,8 +208,8 @@ import Testing
     #expect(recipe.diffusion.bloom == 0.50)
     #expect(recipe.halation.amount == 0.40)
     #expect(recipe.halation.spillRadius == 0.50)
-    #expect(recipe.grain.amount == 0.35)
-    #expect(abs(recipe.grain.grainSize - 24.1) < 0.000_001)
+    #expect(recipe.grain.amount == 0.25)
+    #expect(recipe.grain.grainSize == 30)
     #expect(recipe.grain.acutance == 0.42)
     #expect(recipe.grain.sizeVariation == 0.50)
     #expect(recipe.grain.chroma == 0.98)
@@ -219,8 +219,8 @@ import Testing
 
 @Test func grainAmountUsesTheCalibratedIntensityScale() {
     #expect(FilmRenderer.mappedGrainAmount(0) == 0)
-    #expect(abs(FilmRenderer.mappedGrainAmount(0.25) - 1.32) < 0.000_001)
-    #expect(abs(FilmRenderer.mappedGrainAmount(1) - 5.28) < 0.000_001)
+    #expect(abs(FilmRenderer.mappedGrainAmount(0.25) - 1.056) < 0.000_001)
+    #expect(abs(FilmRenderer.mappedGrainAmount(1) - 4.224) < 0.000_001)
 }
 
 @Test func grainRandomFieldHasNoStrongDirectionalCorrelation() throws {
