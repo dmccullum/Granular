@@ -90,7 +90,9 @@ struct DropModeView: View {
 
             FilmBackStatusBar()
         }
-        .background(AlloySurface().ignoresSafeArea())
+        // The alloy is drawn once behind both modes, at the window's size; a
+        // second one here, at Instant's size, showed as a lighter panel while
+        // the window shrank from Edit mode.
         .contentShape(Rectangle())
         .dropDestination(for: URL.self) { urls, _ in
             // A frame dragged off the strip and let go over the window stays put.

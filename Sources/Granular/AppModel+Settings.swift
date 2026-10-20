@@ -10,6 +10,7 @@ enum SettingsKey {
     static let menuBarVisibility = "settings.menuBarVisibility"
     static let lastMode = "settings.lastMode"
     static let wasWatching = "settings.wasWatching"
+    static let showsInspector = "editor.showsInspector"
     static func windowFrame(_ mode: OperationMode) -> String { "window.frame.\(mode.rawValue)" }
 }
 
@@ -59,6 +60,7 @@ extension AppModel {
            let mode = OperationMode(rawValue: raw) {
             operationMode = mode
             // Nothing is switching: the window simply opens in this mode.
+            displayedMode = mode
             isSettlingWindow = false
             arrivingLayoutSize = nil
         }

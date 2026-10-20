@@ -91,11 +91,8 @@ extension AppModel {
         processedPreview = nil
         showOriginal = false
         editorNotice = nil
-        let isChangingMode = operationMode != .edit
+        // Switching modes starts the window's resize.
         operationMode = .edit
-        if isChangingMode {
-            scheduleWindowResize(for: .edit, animated: true)
-        }
         statusMessage = "Rendering preview…"
         schedulePreview()
         return true

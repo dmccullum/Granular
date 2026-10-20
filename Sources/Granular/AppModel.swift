@@ -70,12 +70,20 @@ final class AppModel {
             if operationMode != oldValue {
                 isSettlingWindow = true
                 arrivingLayoutSize = layoutSize(for: operationMode)
+                if mainWindow != nil {
+                    scheduleWindowResize(for: operationMode, animated: true)
+                } else {
+                    displayedMode = operationMode
+                }
             }
             if operationMode != .drop {
                 isFilmLoaded = false
             }
         }
     }
+    /// The mode on screen. It follows `operationMode` once the views have
+    /// answered a switch, so the window and the crossfade then start together.
+    var displayedMode: OperationMode = .drop
     /// Whether film is loaded in Instant mode's camera back. It loads as the
     /// window settles into Instant mode and rewinds as it leaves.
     var isFilmLoaded = false
@@ -86,7 +94,9 @@ final class AppModel {
     /// One duration and curve for everything in a mode switch: the window,
     /// the crossfade and the film, so it reads as a single motion.
     static let modeTransitionDuration = 0.42
-    static let modeTransitionCurve = (x1: 0.32, y1: 0.72, x2: 0.0, y2: 1.0)
+    // Eases in as well as out: a curve that set off at full speed covered
+    // two thirds of the resize in its first 90 ms and read as a jump.
+    static let modeTransitionCurve = (x1: 0.3, y1: 0.0, x2: 0.1, y2: 1.0)
     static var modeTransitionAnimation: Animation {
         let c = modeTransitionCurve
         return .timingCurve(c.x1, c.y1, c.x2, c.y2, duration: modeTransitionDuration)
@@ -128,6 +138,8 @@ final class AppModel {
     var stockThumbnailKey: StockThumbnailKey?
     static let stockThumbnailPixelSize = 224
     var resizeTask: Task<Void, Never>?
+    /// Counts resizes, so one that is overtaken by another doesn't settle the window.
+    var resizeGeneration = 0
     var monitor: WatchedFolderMonitor?
     var activeSecurityURLs: [URL] = []
 

@@ -5,44 +5,64 @@ import SwiftUI
 struct ContentView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Edit mode put away under Instant mode: out of reach of the keyboard
+    /// and VoiceOver. Putting it away makes its sliders update, which would
+    /// stall an animation, so it waits until Instant mode has settled.
+    @State private var isEditModeAway = false
 
     var body: some View {
         @Bindable var model = model
 
         let showsCameraBody = model.operationMode == .drop
+        let isCameraBodyOnScreen = model.displayedMode == .drop
 
-        // A mode switch is one motion: the window resizes while the two modes
-        // crossfade, each held at its own size so neither reflows mid-move.
+        // A mode switch is one motion: the window resizes while Instant
+        // mode's camera body fades in over Edit mode or out to reveal it,
+        // each held at its own size so neither reflows mid-move.
         ZStack {
-            if showsCameraBody || model.isSettlingWindow {
-                AlloySurface()
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-            }
-            switch model.operationMode {
-            case .drop:
-                DropModeView()
-                    .holdingLayoutDuringModeChange(for: .drop)
-                    .transition(.opacity)
-            case .edit:
-                EditModeView()
-                    .holdingLayoutDuringModeChange(for: .edit)
-                    .transition(.opacity)
+            // Edit mode stays built, and opaque, under Instant mode. Building
+            // it afresh, or fading it, made its sliders lay themselves out
+            // again, which held up the switch.
+            EditModeView()
+                .holdingLayoutDuringModeChange(for: .edit)
+                .allowsHitTesting(!showsCameraBody)
+                .disabled(isEditModeAway)
+                .accessibilityHidden(isEditModeAway)
+                .task(id: showsCameraBody && !model.isSettlingWindow) {
+                    guard showsCameraBody, !model.isSettlingWindow else {
+                        // Back before the window moves, while nothing animates.
+                        isEditModeAway = false
+                        return
+                    }
+                    // After the film has loaded.
+                    try? await Task.sleep(for: .seconds(1))
+                    isEditModeAway = !Task.isCancelled
+                }
+            // Built as soon as Instant mode is chosen, and drawn once, all but
+            // transparent, so its first frame on screen isn't its first
+            // render. It fades in and out as the window moves, and goes only
+            // once the window has settled, out of sight: taking it away, or
+            // drawing it for the first time, held up the start of the move.
+            if showsCameraBody || isCameraBodyOnScreen || model.isSettlingWindow {
+                ZStack {
+                    AlloySurface()
+                        .ignoresSafeArea()
+                    DropModeView()
+                        .holdingLayoutDuringModeChange(for: .drop)
+                }
+                // Never quite opaque or quite clear, so fading doesn't change
+                // how it is drawn, which stalled the start of the switch.
+                .opacity(isCameraBodyOnScreen ? 0.999 : 0.001)
+                .animation(fadeAnimation, value: isCameraBodyOnScreen)
+                .allowsHitTesting(showsCameraBody)
+                .transition(.identity)
             }
         }
-        .animation(modeContentAnimation, value: model.operationMode)
         .frame(minWidth: 620, minHeight: 340)
-        .overlay(alignment: .topTrailing) {
-            if !showsCameraBody, !model.isSettlingWindow {
-                Rectangle()
-                    .fill(Color(nsColor: .separatorColor))
-                    .frame(width: 1)
-                    .offset(x: -310)
-                    .ignoresSafeArea(.container, edges: .top)
-                    .allowsHitTesting(false)
-            }
-        }
-        .toolbarBackgroundVisibility(showsCameraBody || model.isSettlingWindow ? .hidden : .automatic, for: .windowToolbar)
+        // Edit mode's canvas and panel run up under the title, with the line
+        // between them, rather than behind a toolbar material, which picks
+        // up the desktop's tint.
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar(removing: showsCameraBody ? .title : nil)
         // In Edit mode the window stands for the open image: its name and
         // proxy icon, with the recipe beneath. Instant mode keeps its nameplate.
@@ -60,14 +80,6 @@ struct ContentView: View {
                 ToolbarItem(placement: .primaryAction) {
                     EditorShareButton()
                 }
-                // Holds Share over the image's side of the window, at the
-                // inspector's edge, rather than crowding the mode picker.
-                ToolbarItem(placement: .primaryAction) {
-                    Color.clear
-                        .frame(width: 165, height: 1)
-                        .accessibilityHidden(true)
-                }
-                .sharedBackgroundVisibility(.hidden)
             }
             ToolbarItem(placement: .primaryAction) {
                 ModePicker()
@@ -126,8 +138,10 @@ struct ContentView: View {
         )
     }
 
-    private var modeContentAnimation: Animation {
-        reduceMotion ? .easeOut(duration: 0.12) : AppModel.modeTransitionAnimation
+    /// The camera body fades quickly, in the first part of the window's
+    /// move, so it is seen over the image only briefly.
+    private var fadeAnimation: Animation {
+        .easeOut(duration: reduceMotion ? 0.1 : 0.2)
     }
 }
 
@@ -143,22 +157,23 @@ private struct ModeChangeLayoutHold: ViewModifier {
                 .frame(width: size.width, height: size.height)
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                 .onChange(of: proxy.size, initial: true) { _, newSize in
-                    if !model.isSettlingWindow {
+                    if !model.isSettlingWindow, model.operationMode == mode {
                         settledSize = newSize
                     }
                 }
         }
     }
 
-    /// Live size normally; during a mode switch, the arriving mode is laid out
-    /// at its final size and the leaving mode keeps the size it had. Both are
-    /// pinned top-centre, where the window resizes around them.
+    /// Live size in the current mode; during a mode switch, the arriving mode
+    /// is laid out at its final size. A mode that isn't showing keeps the size
+    /// it had, so a hidden Edit mode isn't laid out again for Instant's window.
+    /// Both are pinned top-centre, where the window resizes around them.
     private func layoutSize(live: CGSize) -> CGSize {
-        guard model.isSettlingWindow else { return live }
-        if model.operationMode == mode {
-            return model.arrivingLayoutSize ?? live
+        if model.operationMode != mode {
+            return settledSize ?? live
         }
-        return settledSize ?? live
+        guard model.isSettlingWindow else { return live }
+        return model.arrivingLayoutSize ?? live
     }
 }
 
