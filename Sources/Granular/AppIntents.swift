@@ -62,7 +62,7 @@ struct ApplyRecipeIntent: AppIntent {
 
     @Parameter(
         title: "Images",
-        supportedContentTypes: [.jpeg, .heic, .png, .tiff],
+        supportedContentTypes: [.jpeg, .heic, .png, .tiff, .webP, UTType("public.avif")!],
         inputConnectionBehavior: .connectToPreviousIntentResult
     )
     var images: [IntentFile]
@@ -139,6 +139,31 @@ struct GetRecipesIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[RecipeEntity]> {
         .result(value: model.availableRecipes.map(RecipeEntity.init))
+    }
+}
+
+/// Lists both actions in Spotlight and the Shortcuts app as soon as
+/// Granular is installed.
+struct GranularShortcuts: AppShortcutsProvider {
+    static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: ApplyRecipeIntent(),
+            phrases: [
+                "Apply a \(.applicationName) recipe",
+                "Filmify images with \(.applicationName)",
+            ],
+            shortTitle: "Apply Recipe",
+            systemImageName: "film"
+        )
+        AppShortcut(
+            intent: GetRecipesIntent(),
+            phrases: [
+                "Get \(.applicationName) recipes",
+                "Show my \(.applicationName) recipes",
+            ],
+            shortTitle: "Get Recipes",
+            systemImageName: "list.bullet"
+        )
     }
 }
 
