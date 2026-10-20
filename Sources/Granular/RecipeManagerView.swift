@@ -48,7 +48,6 @@ struct RecipeLibraryView: View {
         } isTargeted: { isTargeted in
             isDropTargeted = isTargeted
         }
-        .confirmingRecipeDeletion(in: .library)
         .sheet(isPresented: $isSavingRecipe) {
             SaveRecipeSheet { model.recipeLibrarySelection = $0.id }
                 .environment(model)
@@ -152,7 +151,7 @@ private struct RecipeLibrarySidebar: View {
         }
         .onDeleteCommand {
             if let id = model.recipeLibrarySelection {
-                model.requestDeletingRecipe(id: id, in: .library)
+                model.deleteRecipe(id: id, in: .library)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -192,8 +191,8 @@ private struct RecipeLibrarySidebar: View {
 
         if isSaved {
             Divider()
-            Button("Delete…", role: .destructive) {
-                model.requestDeletingRecipe(id: recipe.id, in: .library)
+            Button("Delete", role: .destructive) {
+                model.deleteRecipe(id: recipe.id, in: .library)
             }
         }
     }
@@ -204,44 +203,41 @@ private struct RecipeLibrarySidebar: View {
     }
 
     private var bottomBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(spacing: 2) {
-                Menu {
-                    Button("Save Current Settings as Recipe…") {
-                        isSavingRecipe = true
-                    }
-                    Button("Import Recipe…") {
-                        model.chooseRecipesToImport()
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .frame(width: 22, height: 20)
+        HStack(spacing: 2) {
+            Menu {
+                Button("Save Current Settings as Recipe…") {
+                    isSavingRecipe = true
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .help("Save the current settings as a recipe, or import one")
-                .accessibilityLabel("Add Recipe")
-
-                Button {
-                    if let id = model.recipeLibrarySelection {
-                        model.requestDeletingRecipe(id: id, in: .library)
-                    }
-                } label: {
-                    Image(systemName: "minus")
-                        .frame(width: 22, height: 20)
+                Button("Import Recipe…") {
+                    model.chooseRecipesToImport()
                 }
-                .buttonStyle(.borderless)
-                .disabled(!model.isSavedRecipe(model.recipeLibrarySelection ?? ""))
-                .help("Delete the selected recipe")
-                .accessibilityLabel("Delete Recipe")
-
-                Spacer()
+            } label: {
+                Image(systemName: "plus")
+                    .frame(width: 22, height: 20)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 32)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Save the current settings as a recipe, or import one")
+            .accessibilityLabel("Add Recipe")
+
+            Button {
+                if let id = model.recipeLibrarySelection {
+                    model.deleteRecipe(id: id, in: .library)
+                }
+            } label: {
+                Image(systemName: "minus")
+                    .frame(width: 22, height: 20)
+            }
+            .buttonStyle(.borderless)
+            .disabled(!model.isSavedRecipe(model.recipeLibrarySelection ?? ""))
+            .help("Delete the selected recipe")
+            .accessibilityLabel("Delete Recipe")
+
+            Spacer()
         }
+        .padding(.horizontal, 10)
+        .frame(height: 32)
     }
 }
 
@@ -686,40 +682,10 @@ private struct WindowReader: NSViewRepresentable {
 // MARK: - Presenting
 
 extension View {
-    /// Asks before deleting a recipe, as a sheet on this window, when the
-    /// request came from it.
-    func confirmingRecipeDeletion(in window: RecipeWindow) -> some View {
-        modifier(RecipeDeletionConfirmation(window: window))
-    }
-
     /// Opens the Recipe Library when asked from a control that can't open
     /// windows itself, and imports recipe files opened from the Finder.
     func openingRecipeLibrary() -> some View {
         modifier(RecipeLibraryOpener())
-    }
-}
-
-private struct RecipeDeletionConfirmation: ViewModifier {
-    @Environment(AppModel.self) private var model
-    let window: RecipeWindow
-
-    func body(content: Content) -> some View {
-        content.confirmationDialog(
-            "Delete “\(model.recipeDeletionRequest?.recipe.name ?? "")”?",
-            isPresented: Binding(
-                get: { model.recipeDeletionRequest?.window == window },
-                set: { if !$0 { model.recipeDeletionRequest = nil } }
-            ),
-            titleVisibility: .visible,
-            presenting: model.recipeDeletionRequest
-        ) { request in
-            Button("Delete", role: .destructive) {
-                model.deleteRecipe(id: request.recipe.id, in: window)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("You can undo this with Edit ▸ Undo.")
-        }
     }
 }
 

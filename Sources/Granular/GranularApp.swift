@@ -143,6 +143,8 @@ struct GranularDesktopApp: App {
             SettingsView()
                 .environment(model)
         }
+        // Each tab already fits its content, so the window can't be resized or zoomed.
+        .windowResizability(.contentSize)
 
         MenuBarExtra(isInserted: Binding(
             get: { model.menuBarVisibility == .always || model.showMenuBarExtra },
@@ -164,7 +166,7 @@ private struct AboutCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button("About Granular") {
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()
                 AboutWindowController.shared.show()
             }
         }

@@ -69,7 +69,7 @@ extension AppModel {
         watchErrorMessage = nil
         watchStatusMessage = "Watching \(input.lastPathComponent)"
         statusMessage = watchStatusMessage
-        Task {
+        Task { [weak self] in
             await monitor.start(folder: input) { [weak self] urls in
                 guard let self else { return [] }
                 return await self.processInstantly(urls, destinationOverride: output)

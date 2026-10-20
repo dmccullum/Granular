@@ -7,7 +7,7 @@ struct MainWindowCommands: Commands {
         CommandGroup(replacing: .windowList) {
             // No shortcut: ⌘0 belongs to View ▸ Actual Size.
             Button("Granular") {
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()
                 openWindow(id: "main")
             }
         }
