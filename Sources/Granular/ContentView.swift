@@ -32,16 +32,6 @@ struct ContentView: View {
         }
         .animation(modeContentAnimation, value: model.operationMode)
         .frame(minWidth: 620, minHeight: 340)
-        .overlay(alignment: .topTrailing) {
-            if !showsCameraBody, !model.isSettlingWindow {
-                Rectangle()
-                    .fill(Color(nsColor: .separatorColor))
-                    .frame(width: 1)
-                    .offset(x: -310)
-                    .ignoresSafeArea(.container, edges: .top)
-                    .allowsHitTesting(false)
-            }
-        }
         .toolbarBackgroundVisibility(showsCameraBody || model.isSettlingWindow ? .hidden : .automatic, for: .windowToolbar)
         .toolbar(removing: showsCameraBody ? .title : nil)
         // In Edit mode the window stands for the open image: its name and
@@ -53,19 +43,6 @@ struct ContentView: View {
             if showsCameraBody {
                 ToolbarItem(placement: .principal) {
                     CameraNameplate()
-                }
-                .sharedBackgroundVisibility(.hidden)
-            }
-            if model.operationMode == .edit {
-                ToolbarItem(placement: .primaryAction) {
-                    EditorShareButton()
-                }
-                // Holds Share over the image's side of the window, at the
-                // inspector's edge, rather than crowding the mode picker.
-                ToolbarItem(placement: .primaryAction) {
-                    Color.clear
-                        .frame(width: 165, height: 1)
-                        .accessibilityHidden(true)
                 }
                 .sharedBackgroundVisibility(.hidden)
             }

@@ -162,36 +162,46 @@ struct EditModeView: View {
     @Environment(AppModel.self) private var model
     @State private var zoomController = ViewerZoomController()
     @FocusState private var isCanvasFocused: Bool
+    @AppStorage(SettingsKey.showsInspector) private var showsInspector = true
 
     var body: some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 0) {
-                EditorCanvas(zoomController: zoomController)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    // Focusable so ⌘C copies the image once the canvas is clicked,
-                    // leaving Copy to the text fields whenever one of those has focus.
-                    .focusable(interactions: .edit)
-                    .focused($isCanvasFocused)
-                    .focusEffectDisabled()
-                    .onCopyCommand {
-                        model.copyProcessedImage()
-                        return []
-                    }
-                    // Edit mode shows one image at a time: a drop of several
-                    // opens the first and offers the rest to Instant mode.
-                    .dropDestination(for: URL.self) { urls, _ in
-                        model.openForEditing(urls)
-                        return !urls.isEmpty
-                    }
+        EditorCanvas(zoomController: zoomController)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            // Focusable so ⌘C copies the image once the canvas is clicked,
+            // leaving Copy to the text fields whenever one of those has focus.
+            .focusable(interactions: .edit)
+            .focused($isCanvasFocused)
+            .focusEffectDisabled()
+            .onCopyCommand {
+                model.copyProcessedImage()
+                return []
             }
-
-            AdjustmentsInspector()
-                .environment(model)
-                .frame(width: 310)
-                .background(.bar)
-        }
-        .background(Color(nsColor: .windowBackgroundColor))
+            // Edit mode shows one image at a time: a drop of several
+            // opens the first and offers the rest to Instant mode.
+            .dropDestination(for: URL.self) { urls, _ in
+                model.openForEditing(urls)
+                return !urls.isEmpty
+            }
+            .background(Color(nsColor: .windowBackgroundColor))
+            .inspector(isPresented: $showsInspector) {
+                AdjustmentsInspector()
+                    .environment(model)
+                    .inspectorColumnWidth(min: 280, ideal: 310, max: 400)
+            }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    EditorShareButton()
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showsInspector.toggle()
+                    } label: {
+                        Label(showsInspector ? "Hide Inspector" : "Show Inspector", systemImage: "sidebar.trailing")
+                    }
+                    .help(showsInspector ? "Hide the adjustments (⌥⌘I)" : "Show the adjustments (⌥⌘I)")
+                }
+            }
         .background { CenterAdjustmentDismissal() }
         .focusedSceneValue(\.granularViewerZoomController, zoomController)
         .onChange(of: model.selectedSourceURL) { _, _ in
@@ -224,13 +234,18 @@ private struct EditorCanvas: View {
                     zoomController: zoomController
                 )
                 .id(model.selectedSourceURL)
-
-                CanvasOverlays(zoomController: zoomController)
             } else {
                 EditorEmptyState()
             }
 
-            FirstPreviewProgress()
+            GlassEffectContainer {
+                ZStack {
+                    if model.previewImage != nil {
+                        CanvasOverlays(zoomController: zoomController)
+                    }
+                    FirstPreviewProgress()
+                }
+            }
         }
     }
 }
@@ -272,7 +287,7 @@ private struct FirstPreviewProgress: View {
             ProgressView()
                 .controlSize(.small)
                 .padding(9)
-                .background(.regularMaterial, in: Circle())
+                .glassEffect(.regular, in: .circle)
         }
     }
 }
@@ -742,7 +757,7 @@ private struct CenterAdjustmentStatusBar: View {
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
             Button("Done", action: model.finishCenterAdjustment)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.glassProminent)
                 .controlSize(.small)
                 .keyboardShortcut(.return, modifiers: [])
         }
@@ -750,12 +765,7 @@ private struct CenterAdjustmentStatusBar: View {
         .padding(.leading, 12)
         .padding(.trailing, 7)
         .padding(.vertical, 7)
-        .background(.regularMaterial, in: Capsule())
-        .overlay {
-            Capsule()
-                .strokeBorder(.white.opacity(0.11), lineWidth: 0.5)
-        }
-        .shadow(color: .black.opacity(0.2), radius: 8, y: 3)
+        .glassEffect(.regular, in: .capsule)
         .accessibilityElement(children: .contain)
     }
 
@@ -781,9 +791,9 @@ private struct ZoomControls: View {
             Button {
                 zoomController.zoomOut()
             } label: {
-                ZoomButtonLabel(systemImage: "minus", width: 30)
+                Label("Zoom Out", systemImage: "minus")
+                    .labelStyle(.iconOnly)
             }
-            .buttonStyle(.plain)
             .accessibilityLabel("Zoom Out")
             .help("Zoom out (⌘−)")
 
@@ -801,36 +811,29 @@ private struct ZoomControls: View {
             Button {
                 zoomController.zoomIn()
             } label: {
-                ZoomButtonLabel(systemImage: "plus", width: 30)
+                Label("Zoom In", systemImage: "plus")
+                    .labelStyle(.iconOnly)
             }
-            .buttonStyle(.plain)
             .accessibilityLabel("Zoom In")
             .help("Zoom in (⌘+)")
 
             Divider().frame(height: 14)
 
             HStack(spacing: 7) {
-                Button {
+                Button("Fit") {
                     zoomController.fit()
-                } label: {
-                    ZoomButtonLabel("Fit", width: 38)
                 }
-                .buttonStyle(.plain)
                 .help("Fit the image in the window (⌘9)")
 
                 zoomPresets
             }
         }
+        .buttonStyle(.borderless)
         .controlSize(.small)
         .fixedSize(horizontal: true, vertical: true)
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(.regularMaterial)
-        .clipShape(Capsule())
-        .overlay {
-            Capsule()
-                .strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
-        }
+        .glassEffect(.regular, in: .capsule)
     }
 }
 
@@ -877,37 +880,6 @@ extension ZoomControls {
     }
 }
 
-private struct ZoomButtonLabel: View {
-    private let title: String?
-    private let systemImage: String?
-    private let width: CGFloat
-
-    init(_ title: String, width: CGFloat) {
-        self.title = title
-        self.systemImage = nil
-        self.width = width
-    }
-
-    init(systemImage: String, width: CGFloat) {
-        self.title = nil
-        self.systemImage = systemImage
-        self.width = width
-    }
-
-    var body: some View {
-        Group {
-            if let systemImage {
-                Image(systemName: systemImage)
-            } else if let title {
-                Text(title)
-            }
-        }
-        .frame(width: width, height: 22)
-        .background(.white.opacity(0.11), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .contentShape(Rectangle())
-    }
-}
-
 private extension NSImage {
     var pixelDimensions: CGSize {
         guard let representation = representations.max(by: {
@@ -923,29 +895,20 @@ private struct EditorEmptyState: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "photo.badge.plus")
-                .font(.system(size: 50, weight: .light))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.tint)
-            Text("Open an image to begin")
-                .font(.title2.weight(.semibold))
+        ContentUnavailableView {
+            Label("Open an Image to Begin", systemImage: "photo.badge.plus")
+        } description: {
             Text("Adjust the recipe with a live preview, then export when it feels right.")
-                .foregroundStyle(.secondary)
+        } actions: {
             Button("Open Image…") {
                 model.chooseImageForEditing()
             }
             .buttonStyle(.glassProminent)
             .controlSize(.large)
         }
-        .padding(40)
     }
 }
 
-
-/// A quiet strip along the foot of the canvas, as in the Finder: what the open
-/// image is on the leading side, and what Granular is doing with it on the
-/// trailing side. Share and Export live in the window toolbar.
 /// An export or a full-size render in progress, or a brief notice, floating
 /// above the zoom controls.
 private struct EditorActivity: View {
@@ -953,6 +916,24 @@ private struct EditorActivity: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        Group {
+            if isShowing {
+                content
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .glassEffect(.regular, in: .capsule)
+                    .transition(.opacity)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.editorNotice)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.transferRenderCount > 0)
+    }
+
+    @ViewBuilder
+    private var content: some View {
         Group {
             if model.isExporting || model.transferRenderCount > 0 {
                 HStack(spacing: 6) {
@@ -975,18 +956,6 @@ private struct EditorActivity: View {
                 .transition(.opacity)
             }
         }
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-        .lineLimit(1)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background {
-            if isShowing {
-                Capsule().fill(.regularMaterial)
-            }
-        }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.editorNotice)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.transferRenderCount > 0)
     }
 
     private var isShowing: Bool {

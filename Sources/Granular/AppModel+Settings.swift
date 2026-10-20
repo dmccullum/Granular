@@ -10,6 +10,7 @@ enum SettingsKey {
     static let menuBarVisibility = "settings.menuBarVisibility"
     static let lastMode = "settings.lastMode"
     static let wasWatching = "settings.wasWatching"
+    static let showsInspector = "editor.showsInspector"
     static func windowFrame(_ mode: OperationMode) -> String { "window.frame.\(mode.rawValue)" }
 }
 
