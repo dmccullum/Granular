@@ -16,6 +16,7 @@ struct MainWindowCommands: Commands {
 
 struct ViewerCommands: Commands {
     @FocusedValue(\.granularViewerZoomController) private var zoomController
+    @AppStorage(SettingsKey.showsInspector) private var showsInspector = true
     let model: AppModel
 
     var body: some Commands {
@@ -34,6 +35,16 @@ struct ViewerCommands: Commands {
         }
 
         CommandGroup(after: .toolbar) {
+            Button(showsInspector ? "Hide Inspector" : "Show Inspector") {
+                withAnimation(.smooth(duration: 0.25)) {
+                    showsInspector.toggle()
+                }
+            }
+            .keyboardShortcut("i", modifiers: [.command, .option])
+            .disabled(model.operationMode != .edit)
+
+            Divider()
+
             Button(model.showOriginal ? "Show Processed" : "Show Original") {
                 model.showOriginal.toggle()
             }

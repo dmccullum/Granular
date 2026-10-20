@@ -164,36 +164,45 @@ struct EditModeView: View {
     @FocusState private var isCanvasFocused: Bool
     @AppStorage(SettingsKey.showsInspector) private var showsInspector = true
 
+    // The adjustments sit beside the canvas under the window's one toolbar,
+    // rather than in an `.inspector`, which gives the panel its own toolbar.
     var body: some View {
-        EditorCanvas(zoomController: zoomController)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-            // Focusable so ⌘C copies the image once the canvas is clicked,
-            // leaving Copy to the text fields whenever one of those has focus.
-            .focusable(interactions: .edit)
-            .focused($isCanvasFocused)
-            .focusEffectDisabled()
-            .onCopyCommand {
-                model.copyProcessedImage()
-                return []
-            }
-            // Edit mode shows one image at a time: a drop of several
-            // opens the first and offers the rest to Instant mode.
-            .dropDestination(for: URL.self) { urls, _ in
-                model.openForEditing(urls)
-                return !urls.isEmpty
-            }
-            .background(Color(nsColor: .windowBackgroundColor))
-            .inspector(isPresented: $showsInspector) {
-                AdjustmentsInspector()
-                    .environment(model)
-                    .inspectorColumnWidth(min: 280, ideal: 310, max: 400)
-            }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    EditorShareButton()
+        HStack(spacing: 0) {
+            EditorCanvas(zoomController: zoomController)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                // Focusable so ⌘C copies the image once the canvas is clicked,
+                // leaving Copy to the text fields whenever one of those has focus.
+                .focusable(interactions: .edit)
+                .focused($isCanvasFocused)
+                .focusEffectDisabled()
+                .onCopyCommand {
+                    model.copyProcessedImage()
+                    return []
                 }
+                // Edit mode shows one image at a time: a drop of several
+                // opens the first and offers the rest to Instant mode.
+                .dropDestination(for: URL.self) { urls, _ in
+                    model.openForEditing(urls)
+                    return !urls.isEmpty
+                }
+
+            if showsInspector {
+                HStack(spacing: 0) {
+                    // The one line between canvas and panel runs the window's full
+                    // height, through the toolbar, which has no line of its own.
+                    Divider()
+                        .ignoresSafeArea(.container, edges: .top)
+                    AdjustmentsInspector()
+                        .environment(model)
+                        .frame(width: 310)
+                }
+                // Solid, as a material would pick up the desktop's tint.
+                .background(Color(nsColor: .windowBackgroundColor), ignoresSafeAreaEdges: [])
+                .transition(.move(edge: .trailing))
             }
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
         .background { CenterAdjustmentDismissal() }
         .focusedSceneValue(\.granularViewerZoomController, zoomController)
         .onChange(of: model.selectedSourceURL) { _, _ in

@@ -32,8 +32,9 @@ struct ContentView: View {
         }
         .animation(modeContentAnimation, value: model.operationMode)
         .frame(minWidth: 620, minHeight: 340)
-        // Edit mode's canvas runs up under the title rather than behind a
-        // toolbar material, which picks up the desktop's tint.
+        // Edit mode's canvas and panel run up under the title, with the line
+        // between them, rather than behind a toolbar material, which picks
+        // up the desktop's tint.
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar(removing: showsCameraBody ? .title : nil)
         // In Edit mode the window stands for the open image: its name and
@@ -47,6 +48,11 @@ struct ContentView: View {
                     CameraNameplate()
                 }
                 .sharedBackgroundVisibility(.hidden)
+            }
+            if model.operationMode == .edit {
+                ToolbarItem(placement: .primaryAction) {
+                    EditorShareButton()
+                }
             }
             ToolbarItem(placement: .primaryAction) {
                 ModePicker()

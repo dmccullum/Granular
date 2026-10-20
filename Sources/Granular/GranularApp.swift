@@ -122,7 +122,6 @@ struct GranularDesktopApp: App {
             AboutCommands()
             MainWindowCommands()
             ViewerCommands(model: model)
-            InspectorCommands()
 
             FileCommands(model: model)
             EditCommands(model: model)
