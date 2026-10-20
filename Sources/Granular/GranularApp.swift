@@ -166,7 +166,7 @@ private struct AboutCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button("About Granular") {
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()
                 AboutWindowController.shared.show()
             }
         }
