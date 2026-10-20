@@ -34,6 +34,13 @@ extension AppModel {
         guard animated else {
             displayedMode = mode
             resizeWindow(for: mode, animated: false, completion: settle)
+            if mode == .drop {
+                // At launch the film loads once the camera body is on screen.
+                resizeTask = Task { [weak self] in
+                    guard !Task.isCancelled, let self, self.operationMode == mode else { return }
+                    self.isFilmLoaded = true
+                }
+            }
             return
         }
         resizeTask = Task { [weak self] in
