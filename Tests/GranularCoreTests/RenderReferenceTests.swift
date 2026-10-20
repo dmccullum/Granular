@@ -173,6 +173,14 @@ private func renderMatchesReference(_ testCase: ReferenceCase) throws {
     }
     let meanDifference = totalDifference / Float(pixels.count)
     // The working format is half float, which resolves about 1/1024 near 1.
-    #expect(maximumDifference <= 0.004, "\(testCase.name): max \(maximumDifference)")
+    // The references come from a Mac. The iOS Simulator's renders drift from
+    // them by up to about 0.0065 in single pixels, even for the Raw recipe,
+    // which runs no kernels, while the mean stays as tight as on the Mac.
+    #if targetEnvironment(simulator)
+    let maximumTolerance: Float = 0.01
+    #else
+    let maximumTolerance: Float = 0.004
+    #endif
+    #expect(maximumDifference <= maximumTolerance, "\(testCase.name): max \(maximumDifference)")
     #expect(meanDifference <= 0.0005, "\(testCase.name): mean \(meanDifference)")
 }
