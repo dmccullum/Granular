@@ -32,7 +32,9 @@ struct ContentView: View {
         }
         .animation(modeContentAnimation, value: model.operationMode)
         .frame(minWidth: 620, minHeight: 340)
-        .toolbarBackgroundVisibility(showsCameraBody || model.isSettlingWindow ? .hidden : .automatic, for: .windowToolbar)
+        // Edit mode's canvas runs up under the title rather than behind a
+        // toolbar material, which picks up the desktop's tint.
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar(removing: showsCameraBody ? .title : nil)
         // In Edit mode the window stands for the open image: its name and
         // proxy icon, with the recipe beneath. Instant mode keeps its nameplate.

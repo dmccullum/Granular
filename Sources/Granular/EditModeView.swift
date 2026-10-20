@@ -193,14 +193,6 @@ struct EditModeView: View {
                 ToolbarItem(placement: .primaryAction) {
                     EditorShareButton()
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showsInspector.toggle()
-                    } label: {
-                        Label(showsInspector ? "Hide Inspector" : "Show Inspector", systemImage: "sidebar.trailing")
-                    }
-                    .help(showsInspector ? "Hide the adjustments (⌥⌘I)" : "Show the adjustments (⌥⌘I)")
-                }
             }
         .background { CenterAdjustmentDismissal() }
         .focusedSceneValue(\.granularViewerZoomController, zoomController)
@@ -287,7 +279,7 @@ private struct FirstPreviewProgress: View {
             ProgressView()
                 .controlSize(.small)
                 .padding(9)
-                .glassEffect(.regular, in: .circle)
+                .canvasGlass(in: .circle)
         }
     }
 }
@@ -765,7 +757,7 @@ private struct CenterAdjustmentStatusBar: View {
         .padding(.leading, 12)
         .padding(.trailing, 7)
         .padding(.vertical, 7)
-        .glassEffect(.regular, in: .capsule)
+        .canvasGlass(in: .capsule)
         .accessibilityElement(children: .contain)
     }
 
@@ -793,6 +785,7 @@ private struct ZoomControls: View {
             } label: {
                 Label("Zoom Out", systemImage: "minus")
                     .labelStyle(.iconOnly)
+                    .zoomButtonTarget(width: 30)
             }
             .accessibilityLabel("Zoom Out")
             .help("Zoom out (⌘−)")
@@ -813,6 +806,7 @@ private struct ZoomControls: View {
             } label: {
                 Label("Zoom In", systemImage: "plus")
                     .labelStyle(.iconOnly)
+                    .zoomButtonTarget(width: 30)
             }
             .accessibilityLabel("Zoom In")
             .help("Zoom in (⌘+)")
@@ -820,8 +814,11 @@ private struct ZoomControls: View {
             Divider().frame(height: 14)
 
             HStack(spacing: 7) {
-                Button("Fit") {
+                Button {
                     zoomController.fit()
+                } label: {
+                    Text("Fit")
+                        .zoomButtonTarget(width: 38)
                 }
                 .help("Fit the image in the window (⌘9)")
 
@@ -833,7 +830,7 @@ private struct ZoomControls: View {
         .fixedSize(horizontal: true, vertical: true)
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .glassEffect(.regular, in: .capsule)
+        .canvasGlass(in: .capsule)
     }
 }
 
@@ -877,6 +874,33 @@ extension ZoomControls {
                 Text(title)
             }
         }
+    }
+}
+
+/// Glass for controls floating over the canvas. On the dark canvas plain
+/// glass is nearly the canvas's own colour, so it is lifted a little there.
+private struct CanvasGlass<S: Shape>: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    let shape: S
+
+    func body(content: Content) -> some View {
+        content.glassEffect(
+            colorScheme == .dark ? .regular.tint(.white.opacity(0.08)) : .regular,
+            in: shape
+        )
+    }
+}
+
+private extension View {
+    func canvasGlass(in shape: some Shape) -> some View {
+        modifier(CanvasGlass(shape: shape))
+    }
+
+    /// The zoom bar's buttons are borderless, so their label sets the size of
+    /// what can be clicked.
+    func zoomButtonTarget(width: CGFloat) -> some View {
+        frame(width: width, height: 22)
+            .contentShape(Rectangle())
     }
 }
 
@@ -924,7 +948,7 @@ private struct EditorActivity: View {
                     .lineLimit(1)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .glassEffect(.regular, in: .capsule)
+                    .canvasGlass(in: .capsule)
                     .transition(.opacity)
             }
         }
