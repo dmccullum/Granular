@@ -203,44 +203,41 @@ private struct RecipeLibrarySidebar: View {
     }
 
     private var bottomBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(spacing: 2) {
-                Menu {
-                    Button("Save Current Settings as Recipe…") {
-                        isSavingRecipe = true
-                    }
-                    Button("Import Recipe…") {
-                        model.chooseRecipesToImport()
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .frame(width: 22, height: 20)
+        HStack(spacing: 2) {
+            Menu {
+                Button("Save Current Settings as Recipe…") {
+                    isSavingRecipe = true
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .help("Save the current settings as a recipe, or import one")
-                .accessibilityLabel("Add Recipe")
-
-                Button {
-                    if let id = model.recipeLibrarySelection {
-                        model.deleteRecipe(id: id, in: .library)
-                    }
-                } label: {
-                    Image(systemName: "minus")
-                        .frame(width: 22, height: 20)
+                Button("Import Recipe…") {
+                    model.chooseRecipesToImport()
                 }
-                .buttonStyle(.borderless)
-                .disabled(!model.isSavedRecipe(model.recipeLibrarySelection ?? ""))
-                .help("Delete the selected recipe")
-                .accessibilityLabel("Delete Recipe")
-
-                Spacer()
+            } label: {
+                Image(systemName: "plus")
+                    .frame(width: 22, height: 20)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 32)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Save the current settings as a recipe, or import one")
+            .accessibilityLabel("Add Recipe")
+
+            Button {
+                if let id = model.recipeLibrarySelection {
+                    model.deleteRecipe(id: id, in: .library)
+                }
+            } label: {
+                Image(systemName: "minus")
+                    .frame(width: 22, height: 20)
+            }
+            .buttonStyle(.borderless)
+            .disabled(!model.isSavedRecipe(model.recipeLibrarySelection ?? ""))
+            .help("Delete the selected recipe")
+            .accessibilityLabel("Delete Recipe")
+
+            Spacer()
         }
+        .padding(.horizontal, 10)
+        .frame(height: 32)
     }
 }
 
