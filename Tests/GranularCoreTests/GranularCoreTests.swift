@@ -384,12 +384,9 @@ import Testing
 @Test func grainRandomFieldHasNoStrongDirectionalCorrelation() throws {
     // Exercise the actual GPU hash at photo-sized coordinates, including large
     // seeds. Small images alone can miss the diagonal bands seen in exports.
-    let kernel = try #require(CIColorKernel(source: FilmRenderer.grainHashSource + "\n" + """
-        kernel vec4 randomField(float seed) {
-            float value = filmHash(floor(destCoord()), seed);
-            return vec4(value, value, value, 1.0);
-        }
-        """))
+    let kernel = try CIColorKernel(
+        functionName: "grainHashField", fromMetalLibraryData: FilmRenderer.kernelLibrary()
+    )
     let side = 256
     for origin in [CGPoint.zero, CGPoint(x: 5500, y: 3500)] {
         let extent = CGRect(origin: origin, size: CGSize(width: side, height: side))

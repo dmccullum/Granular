@@ -40,6 +40,10 @@ if [[ ! -x "$ICON_TOOL" ]]; then
     fail "Granular needs the full Xcode 26 application, including Icon Composer. Command Line Tools alone are not enough."
 fi
 
+if ! /usr/bin/xcrun metal --version >/dev/null 2>&1; then
+    fail "Granular needs Xcode's Metal Toolchain. Install it with: xcodebuild -downloadComponent MetalToolchain"
+fi
+
 echo "Building Granular…"
 echo
 

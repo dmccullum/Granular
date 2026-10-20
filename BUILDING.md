@@ -8,6 +8,12 @@ account. The resulting app is intended for use on the Mac that built it.
 - macOS 26 or later
 - The full Xcode 26 application from Apple
 - Xcode opened at least once so it can install its required components
+- Xcode's Metal Toolchain, which compiles Granular's image kernels. Xcode 26
+  and later download it separately:
+
+  ```sh
+  xcodebuild -downloadComponent MetalToolchain
+  ```
 
 Command Line Tools by themselves are not sufficient because Granular uses
 Apple's Icon Composer when assembling the app bundle.
