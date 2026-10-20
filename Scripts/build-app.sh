@@ -56,6 +56,15 @@ if [[ ! -f "$CONTENTS/Resources/Metadata.appintents/extract.actionsdata" ]]; the
 fi
 cp "$ROOT/Resources/Info.plist" "$CONTENTS/Info.plist"
 cp -R "$ROOT/Sources/GranularCore/FilmStocks" "$CONTENTS/Resources/FilmStocks"
+# The CompileFilmKernels plugin puts the Metal kernels in GranularCore's resource
+# bundle, which only resolves from the build folder. FilmRenderer looks in the
+# app first.
+KERNEL_LIBRARY=("$ROOT"/.build/release/Granular_GranularCore.bundle/**/FilmKernels-macosx.metallib(N))
+if (( ${#KERNEL_LIBRARY} != 1 )); then
+    echo "GranularCore's compiled Metal kernels weren't found." >&2
+    exit 70
+fi
+cp "$KERNEL_LIBRARY[1]" "$CONTENTS/Resources/"
 cp -R "$ROOT/Resources/Fonts" "$CONTENTS/Resources/Fonts"
 cp "$ROOT/Resources/THIRD_PARTY_NOTICES.txt" "$CONTENTS/Resources/THIRD_PARTY_NOTICES.txt"
 xcrun actool \

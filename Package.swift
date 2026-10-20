@@ -16,9 +16,17 @@ let package = Package(
         .target(
             name: "GranularCore",
             path: "Sources/GranularCore",
+            // CompileFilmKernels builds this into the bundle's metallibs.
+            exclude: ["FilmKernels.metal"],
             resources: [
                 .copy("FilmStocks")
-            ]
+            ],
+            plugins: ["CompileFilmKernels"]
+        ),
+        .plugin(
+            name: "CompileFilmKernels",
+            capability: .buildTool(),
+            path: "Plugins/CompileFilmKernels"
         ),
         .executableTarget(
             name: "Granular",
@@ -28,7 +36,8 @@ let package = Package(
         .testTarget(
             name: "GranularCoreTests",
             dependencies: ["GranularCore"],
-            path: "Tests/GranularCoreTests"
+            path: "Tests/GranularCoreTests",
+            exclude: ["RenderReferences"]
         )
     ]
 )
