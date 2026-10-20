@@ -60,6 +60,7 @@ extension AppModel {
            let mode = OperationMode(rawValue: raw) {
             operationMode = mode
             // Nothing is switching: the window simply opens in this mode.
+            displayedMode = mode
             isSettlingWindow = false
             arrivingLayoutSize = nil
         }

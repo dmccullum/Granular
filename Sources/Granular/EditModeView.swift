@@ -216,6 +216,15 @@ struct EditModeView: View {
                 isCanvasFocused = true
             }
         }
+        .onChange(of: model.operationMode) { _, mode in
+            // Edit mode stays built in Instant mode, out of sight.
+            if mode == .edit {
+                isCanvasFocused = model.selectedSourceURL != nil
+            } else {
+                isCanvasFocused = false
+                model.finishCenterAdjustment()
+            }
+        }
         .onExitCommand(perform: model.finishCenterAdjustment)
         .onDisappear(perform: model.finishCenterAdjustment)
     }
@@ -590,7 +599,8 @@ private final class ViewerInputView: NSView {
 
     /// Returns whether the event was used up, so the rest of the app never sees it.
     private func handle(_ event: NSEvent) -> Bool {
-        guard let window, event.window === window, let zoomController, let model else { return false }
+        guard let window, event.window === window, let zoomController, let model,
+              model.operationMode == .edit else { return false }
 
         switch event.type {
         case .keyDown, .keyUp:

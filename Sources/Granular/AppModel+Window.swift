@@ -13,23 +13,38 @@ extension AppModel {
         if operationMode == .drop, jobs.isEmpty {
             statusMessage = "Ready"
         }
-        scheduleWindowResize(for: operationMode, animated: true)
     }
 
+    /// A switch happens in two steps. The views answer the new mode first,
+    /// with the old one still on screen: that update takes 100–200 ms (the
+    /// toolbar, and the arriving mode built out of sight), and anything
+    /// animating through it jumped. Then the window and the crossfade start
+    /// together and run smoothly.
     func scheduleWindowResize(for mode: OperationMode, animated: Bool = true) {
         resizeTask?.cancel()
-        resizeTask = Task { [weak self] in
-            guard !Task.isCancelled, let self, self.operationMode == mode else { return }
-            if mode == .drop {
-                // The film loads alongside the resize, not after it.
-                self.isFilmLoaded = true
-            }
-            await self.resizeWindow(for: mode, animated: animated)
-            guard !Task.isCancelled, self.operationMode == mode else { return }
+        resizeGeneration += 1
+        let generation = resizeGeneration
+        let settle: @MainActor @Sendable () -> Void = { [weak self] in
+            guard let self, self.resizeGeneration == generation, self.operationMode == mode else { return }
             withAnimation(.easeOut(duration: 0.18)) {
                 self.isSettlingWindow = false
                 self.arrivingLayoutSize = nil
             }
+        }
+        guard animated else {
+            displayedMode = mode
+            resizeWindow(for: mode, animated: false, completion: settle)
+            return
+        }
+        resizeTask = Task { [weak self] in
+            guard !Task.isCancelled, let self, self.resizeGeneration == generation,
+                  self.operationMode == mode else { return }
+            self.displayedMode = mode
+            if mode == .drop {
+                // The film loads alongside the resize.
+                self.isFilmLoaded = true
+            }
+            self.resizeWindow(for: mode, animated: true, completion: settle)
         }
     }
 
@@ -117,8 +132,11 @@ extension AppModel {
         return CGSize(width: max(saved.width, 620), height: height)
     }
 
-    func resizeWindow(for mode: OperationMode, animated: Bool) async {
-        guard let window = mainWindow else { return }
+    func resizeWindow(for mode: OperationMode, animated: Bool, completion: @escaping @MainActor @Sendable () -> Void) {
+        guard let window = mainWindow else {
+            completion()
+            return
+        }
         // A mode switch resizes in place; the first sizing at launch restores the place too.
         let targetFrame = targetFrame(for: mode, in: window, keepingPlace: animated)
         let contentHeight = window.contentRect(forFrameRect: targetFrame).height
@@ -131,28 +149,35 @@ extension AppModel {
         if animated {
             // Animate through the window's animator rather than the blocking
             // setFrame(animate:), so SwiftUI keeps drawing while the size changes.
-            await withCheckedContinuation { continuation in
-                NSAnimationContext.runAnimationGroup { context in
-                    let c = Self.modeTransitionCurve
-                    context.duration = Self.modeTransitionDuration
-                    context.timingFunction = CAMediaTimingFunction(
-                        controlPoints: Float(c.x1), Float(c.y1), Float(c.x2), Float(c.y2)
-                    )
-                    window.animator().setFrame(targetFrame, display: true)
-                } completionHandler: {
-                    continuation.resume()
+            NSAnimationContext.runAnimationGroup { context in
+                let c = Self.modeTransitionCurve
+                context.duration = Self.modeTransitionDuration
+                context.timingFunction = CAMediaTimingFunction(
+                    controlPoints: Float(c.x1), Float(c.y1), Float(c.x2), Float(c.y2)
+                )
+                window.animator().setFrame(targetFrame, display: true)
+            } completionHandler: { [weak self] in
+                MainActor.assumeIsolated {
+                    self?.windowDidSettle(window, in: mode, contentHeight: contentHeight)
+                    completion()
                 }
             }
         } else {
             window.setFrame(targetFrame, display: true)
+            windowDidSettle(window, in: mode, contentHeight: contentHeight)
+            completion()
         }
+    }
+
+    private func windowDidSettle(_ window: NSWindow, in mode: OperationMode, contentHeight: CGFloat) {
+        // A switch overtaken by another leaves the window to the newer one.
+        guard operationMode == mode else { return }
         if mode == .drop {
             applySizeLimits(for: mode, contentHeight: contentHeight, to: window)
         }
 
         // The window now sits where this mode remembers it. From here on,
         // wherever the user leaves it is what gets remembered.
-        guard operationMode == mode else { return }
         savedWindowFrames[mode] = window.frame
         scheduleSavingWindowFrames()
         observeFrameChanges(of: window)
