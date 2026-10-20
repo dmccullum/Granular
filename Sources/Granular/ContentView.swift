@@ -80,7 +80,6 @@ struct ContentView: View {
             model.scheduleWindowResize(for: model.operationMode, animated: false)
         }
         .openingRecipeLibrary()
-        .confirmingRecipeDeletion(in: .main)
         .sheet(isPresented: $model.isSavingRecipe) {
             SaveRecipeSheet()
                 .environment(model)
@@ -263,7 +262,7 @@ final class RecipeMenuController: NSObject {
     }
 
     @objc private func deleteRecipe() {
-        model.requestDeletingCurrentRecipe()
+        model.deleteCurrentRecipe()
     }
 
     @objc private func manageRecipes() {
@@ -305,7 +304,7 @@ final class RecipeMenuController: NSObject {
                     to: menu
                 )
                 addAction(
-                    "Delete “\(model.currentRecipe.name)”…",
+                    "Delete “\(model.currentRecipe.name)”",
                     symbol: "trash",
                     action: #selector(deleteRecipe),
                     to: menu

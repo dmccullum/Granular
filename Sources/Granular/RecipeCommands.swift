@@ -36,8 +36,8 @@ struct RecipeCommands: Commands {
             }
 
             if model.isSelectedRecipeCustom {
-                Button("Delete Current Recipe…", role: .destructive) {
-                    model.requestDeletingCurrentRecipe()
+                Button("Delete Current Recipe", role: .destructive) {
+                    model.deleteCurrentRecipe()
                 }
             }
 

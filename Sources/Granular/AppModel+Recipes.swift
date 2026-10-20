@@ -83,15 +83,9 @@ extension AppModel {
         statusMessage = "Updated recipe “\(updated.name)”"
     }
 
-    /// Asks, in the window the request came from, before deleting the
-    /// recipe in use. Only saved recipes can be deleted.
-    func requestDeletingCurrentRecipe() {
-        requestDeletingRecipe(id: selectedRecipeID)
-    }
-
-    func requestDeletingRecipe(id: String, in window: RecipeWindow? = nil) {
-        guard let recipe = savedRecipes.first(where: { $0.id == id }) else { return }
-        recipeDeletionRequest = RecipeDeletionRequest(recipe: recipe, window: window ?? activeRecipeWindow)
+    /// Deletes the recipe in use. Only saved recipes can be deleted.
+    func deleteCurrentRecipe() {
+        deleteRecipe(id: selectedRecipeID)
     }
 
     /// Deletes a saved recipe. If it was in use, the look stays as it is and
@@ -299,18 +293,10 @@ struct RecipeLibraryState: Equatable {
 }
 
 /// The two windows a recipe change can be made from, each with its own
-/// Edit ▸ Undo and its own place for a confirmation to appear.
+/// Edit ▸ Undo.
 enum RecipeWindow {
     case main
     case library
-}
-
-/// A deletion waiting on a yes, shown as a sheet on the window it came from.
-struct RecipeDeletionRequest: Identifiable {
-    let recipe: FilmRecipe
-    let window: RecipeWindow
-
-    var id: String { recipe.id }
 }
 
 struct RecipeLibraryAlert: Identifiable {
