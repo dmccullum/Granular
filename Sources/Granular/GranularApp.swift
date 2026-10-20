@@ -143,6 +143,8 @@ struct GranularDesktopApp: App {
             SettingsView()
                 .environment(model)
         }
+        // Each tab already fits its content, so the window can't be resized or zoomed.
+        .windowResizability(.contentSize)
 
         MenuBarExtra(isInserted: Binding(
             get: { model.menuBarVisibility == .always || model.showMenuBarExtra },

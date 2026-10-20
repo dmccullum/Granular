@@ -17,7 +17,6 @@ struct SettingsView: View {
                 AutomationSettings()
             }
         }
-        .background(SettingsWindowConfigurator())
     }
 }
 
@@ -409,23 +408,5 @@ private struct SettingsFolderRow: View {
     /// The full path for the tooltip, with the home folder as ~.
     private func abbreviatedPath(_ url: URL) -> String {
         (url.path(percentEncoded: false) as NSString).abbreviatingWithTildeInPath
-    }
-}
-
-/// Settings windows can’t be zoomed: each tab already fits its content.
-private struct SettingsWindowConfigurator: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { ConfiguringView() }
-    func updateNSView(_ view: NSView, context: Context) {}
-
-    private final class ConfiguringView: NSView {
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            guard let window else { return }
-            // After SwiftUI has finished configuring the window.
-            Task { @MainActor in
-                window.standardWindowButton(.zoomButton)?.isEnabled = false
-                window.styleMask.remove(.resizable)
-            }
-        }
     }
 }
