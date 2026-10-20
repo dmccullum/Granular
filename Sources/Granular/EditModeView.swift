@@ -146,10 +146,19 @@ private struct GranularViewerZoomControllerKey: FocusedValueKey {
     typealias Value = ViewerZoomController
 }
 
+private struct GranularHasInspectorKey: FocusedValueKey {
+    typealias Value = Bool
+}
+
 extension FocusedValues {
     var granularViewerZoomController: ViewerZoomController? {
         get { self[GranularViewerZoomControllerKey.self] }
         set { self[GranularViewerZoomControllerKey.self] = newValue }
+    }
+
+    var granularHasInspector: Bool? {
+        get { self[GranularHasInspectorKey.self] }
+        set { self[GranularHasInspectorKey.self] = newValue }
     }
 }
 
@@ -205,6 +214,7 @@ struct EditModeView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .background { CenterAdjustmentDismissal() }
         .focusedSceneValue(\.granularViewerZoomController, zoomController)
+        .focusedSceneValue(\.granularHasInspector, model.operationMode == .edit)
         .onChange(of: model.selectedSourceURL) { _, _ in
             zoomController.resetForNewImage()
             model.finishCenterAdjustment()

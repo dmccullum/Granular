@@ -16,6 +16,7 @@ struct MainWindowCommands: Commands {
 
 struct ViewerCommands: Commands {
     @FocusedValue(\.granularViewerZoomController) private var zoomController
+    @FocusedValue(\.granularHasInspector) private var hasInspector
     @AppStorage(SettingsKey.showsInspector) private var showsInspector = true
     let model: AppModel
 
@@ -41,7 +42,9 @@ struct ViewerCommands: Commands {
                 }
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
-            .disabled(model.operationMode != .edit)
+            // Edit mode says when it is showing; the model's mode alone
+            // doesn't bring the menu up to date.
+            .disabled(hasInspector != true)
 
             Divider()
 
