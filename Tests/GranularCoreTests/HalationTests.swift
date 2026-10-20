@@ -181,7 +181,9 @@ private func halationPixels(_ image: CIImage, workingFormat: CIFormat = .RGBAf) 
     let shiftedOutput = try renderer.render(shifted, recipe: recipe)
     #expect(shiftedOutput.extent == shifted.extent)
     let original = halationPixels(try renderer.render(edge, recipe: recipe))
-    #expect(zip(halationPixels(shiftedOutput), original).allSatisfy { abs($0 - $1) < 0.0001 })
+    // On the iOS Simulator, Core Image's blurs sample at a slightly different
+    // phase for odd offsets, up to 0.0002. A misplaced edge would differ by far more.
+    #expect(zip(halationPixels(shiftedOutput), original).allSatisfy { abs($0 - $1) < 0.001 })
 }
 
 // Optional review artifacts from the actual Core Image renderer, in display sRGB.

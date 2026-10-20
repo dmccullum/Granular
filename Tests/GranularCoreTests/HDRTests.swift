@@ -7,6 +7,19 @@ import Testing
 private let hdrSpace = CGColorSpace(name: CGColorSpace.extendedLinearITUR_2020)!
 private let hdrContext = CIContext(options: [.workingColorSpace: hdrSpace, .workingFormat: CIFormat.RGBAh])
 
+/// The iOS Simulator's ImageIO and Core Image don't apply gain maps when
+/// decoding to HDR: the image comes back at headroom 1. They do encode them,
+/// and PQ photos decode to HDR.
+private let decodesGainMaps: Bool = {
+    #if targetEnvironment(simulator)
+    false
+    #else
+    true
+    #endif
+}()
+private let gainMapDecoding = Testing.ConditionTrait.enabled(
+    if: decodesGainMaps, "The iOS Simulator doesn't apply gain maps when decoding to HDR")
+
 private func hdrPatch(_ rgb: [Float], width: Int = 32, height: Int = 32) -> CIImage {
     let pixels = Array(repeating: rgb + [1], count: width * height).flatMap { $0 }
     return pixels.withUnsafeBytes {
@@ -21,10 +34,10 @@ private func sdrPatch(_ rgb: [Float], width: Int = 32, height: Int = 32) -> CIIm
     hdrPatch(rgb.map { $0 / max(1, rgb.max()!) }, width: width, height: height)
 }
 
-private func hdrPixels(_ image: CIImage) -> [Float] {
+private func hdrPixels(_ image: CIImage, context: CIContext = hdrContext) -> [Float] {
     let extent = image.extent.integral
     var pixels = [Float](repeating: 0, count: Int(extent.width * extent.height) * 4)
-    hdrContext.render(image, toBitmap: &pixels, rowBytes: Int(extent.width) * 16,
+    context.render(image, toBitmap: &pixels, rowBytes: Int(extent.width) * 16,
                       bounds: extent, format: .RGBAf, colorSpace: hdrSpace)
     return pixels
 }
@@ -113,7 +126,7 @@ private func isoGainMap(at url: URL) throws -> CFDictionary? {
     }
 }
 
-@Test func hdrHEICRoundTripHasFreshISOGainMapAndAnEditedSDRBase() async throws {
+@Test(gainMapDecoding) func hdrHEICRoundTripHasFreshISOGainMapAndAnEditedSDRBase() async throws {
     let folder = try hdrFolder()
     defer { try? FileManager.default.removeItem(at: folder) }
     let sourceURL = folder.appendingPathComponent("original.heic")
@@ -189,7 +202,7 @@ private func isoGainMap(at url: URL) throws -> CFDictionary? {
     #expect(try JSONDecoder().decode(OutputOptions.self, from: JSONEncoder().encode(options)) == options)
 }
 
-@Test func hdrPQInputGetsAnSDRBaseAndAdaptiveHEICOutput() async throws {
+@Test(gainMapDecoding) func hdrPQInputGetsAnSDRBaseAndAdaptiveHEICOutput() async throws {
     let folder = try hdrFolder()
     defer { try? FileManager.default.removeItem(at: folder) }
     let sourceURL = folder.appendingPathComponent("pq.heic")
@@ -235,7 +248,7 @@ private func isoGainMap(at url: URL) throws -> CFDictionary? {
     #expect(pixels.max()! > 1)
 }
 
-@Test func hdrSparseHighlightsAreMeasuredEvenWithUnknownMetadata() throws {
+@Test(gainMapDecoding) func hdrSparseHighlightsAreMeasuredEvenWithUnknownMetadata() throws {
     let source = hdrPatch([0.08, 0.08, 0.08], width: 256, height: 192)
     let bright = hdrPatch([8, 4, 2], width: 4, height: 4)
         .transformed(by: .init(translationX: 140, y: 80))
@@ -278,6 +291,10 @@ private func isoGainMap(at url: URL) throws -> CFDictionary? {
     let hdr = ramp { $0 }
     let sdr = ramp { $0 * (1 + $0 / 36) / (1 + $0) }
     let renderer = try FilmRenderer()
+    // Neighbors differ by under 1%, so half-float storage alone shows as slope
+    // jumps of 0.4. The iOS Simulator stores intermediates in the working
+    // format; macOS keeps them in float. Float isolates the tone math.
+    let floatContext = CIContext(options: [.workingColorSpace: hdrSpace, .workingFormat: CIFormat.RGBAf])
     for stock in [FilmStockID.none, .portra400] {
         for exposure in [-2.0, 0, 2] {
             let tone = FilmToneSettings(stock: stock, exposure: exposure)
@@ -285,7 +302,7 @@ private func isoGainMap(at url: URL) throws -> CFDictionary? {
             // white shows as an abrupt jump. The SDR look has its own small
             // steps, from the stock cubes' interpolation; HDR must add none.
             func roughness(_ image: CIImage) -> (luminance: [Float], jump: Float) {
-                let pixels = hdrPixels(image)
+                let pixels = hdrPixels(image, context: floatContext)
                 let luminance = stride(from: 0, to: pixels.count, by: 4).map { pixels[$0 + 1] }
                 let slopes = (1..<width).map {
                     log(luminance[$0] / luminance[$0 - 1]) / log(values[$0] / values[$0 - 1])
@@ -302,7 +319,7 @@ private func isoGainMap(at url: URL) throws -> CFDictionary? {
     }
 }
 
-@Test func hdrSDRPreviewMatchesTheSDRExport() async throws {
+@Test(gainMapDecoding) func hdrSDRPreviewMatchesTheSDRExport() async throws {
     let folder = try hdrFolder()
     defer { try? FileManager.default.removeItem(at: folder) }
     let sourceURL = folder.appendingPathComponent("original.heic")
@@ -328,7 +345,7 @@ private func isoGainMap(at url: URL) throws -> CFDictionary? {
     #expect(hdrStock.contentHeadroom > 1)
 }
 
-@Test func hdrJPEGRoundTripHasAnISOGainMapAndMetadata() async throws {
+@Test(gainMapDecoding) func hdrJPEGRoundTripHasAnISOGainMapAndMetadata() async throws {
     let folder = try hdrFolder()
     defer { try? FileManager.default.removeItem(at: folder) }
     let sourceURL = folder.appendingPathComponent("original.heic")
