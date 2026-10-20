@@ -1188,8 +1188,10 @@ private actor WatchMonitorRecorder {
     }
 }
 
+// Generous: in a parallel run, synchronous renders in other tests can hold the
+// cooperative threads the monitor's task needs for over a second.
 private func eventually(
-    timeout: Duration = .seconds(1),
+    timeout: Duration = .seconds(10),
     condition: @escaping @Sendable () async -> Bool
 ) async -> Bool {
     let clock = ContinuousClock()
