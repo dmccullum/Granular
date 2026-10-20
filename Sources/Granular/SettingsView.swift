@@ -178,7 +178,7 @@ private struct OutputSettings: View {
                                 Button {
                                     model.outputOptions.filenameTemplate += token
                                 } label: {
-                                    Text(tokenTitle(token)) + Text("  \(token)").foregroundStyle(.secondary)
+                                    Text("\(tokenTitle(token))  \(Text(token).foregroundStyle(.secondary))")
                                 }
                             }
                             Divider()
