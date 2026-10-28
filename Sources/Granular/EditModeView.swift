@@ -865,19 +865,17 @@ private extension EffectCenterTarget {
     }
 }
 
+/// The zoom bar under the image: DMKit's floating bar, lifted a little on the
+/// dark canvas, where plain glass is nearly the canvas's own colour.
 private struct ZoomControls: View {
+    @Environment(\.colorScheme) private var colorScheme
     let zoomController: ViewerZoomController
 
     var body: some View {
-        HStack(spacing: 8) {
-            Button {
+        FloatingBar(tint: colorScheme == .dark ? .white.opacity(0.08) : nil) {
+            Button("Zoom Out", systemImage: "minus") {
                 zoomController.zoomOut()
-            } label: {
-                Label("Zoom Out", systemImage: "minus")
-                    .labelStyle(.iconOnly)
-                    .zoomButtonTarget(width: 30)
             }
-            .accessibilityLabel("Zoom Out")
             .help("Zoom out (⌘−)")
 
             Slider(
@@ -891,36 +889,22 @@ private struct ZoomControls: View {
                 .accessibilityValue(Text(zoomController.scale, format: .percent.precision(.fractionLength(0))))
                 .frame(width: 110)
 
-            Button {
+            Button("Zoom In", systemImage: "plus") {
                 zoomController.zoomIn()
-            } label: {
-                Label("Zoom In", systemImage: "plus")
-                    .labelStyle(.iconOnly)
-                    .zoomButtonTarget(width: 30)
             }
-            .accessibilityLabel("Zoom In")
             .help("Zoom in (⌘+)")
 
             Divider().frame(height: 14)
 
-            HStack(spacing: 7) {
-                Button {
-                    zoomController.fit()
-                } label: {
-                    Text("Fit")
-                        .zoomButtonTarget(width: 38)
-                }
-                .help("Fit the image in the window (⌘9)")
-
-                zoomPresets
+            Button("Fit") {
+                zoomController.fit()
             }
+            .help("Fit the image in the window (⌘9)")
+
+            zoomPresets
         }
-        .buttonStyle(.borderless)
-        .controlSize(.small)
+        .buttonStyle(.floatingBar)
         .fixedSize(horizontal: true, vertical: true)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .canvasGlass(in: .capsule)
     }
 }
 
@@ -993,13 +977,6 @@ private struct CanvasGlass<S: Shape>: ViewModifier {
 private extension View {
     func canvasGlass(in shape: some Shape) -> some View {
         modifier(CanvasGlass(shape: shape))
-    }
-
-    /// The zoom bar's buttons are borderless, so their label sets the size of
-    /// what can be clicked.
-    func zoomButtonTarget(width: CGFloat) -> some View {
-        frame(width: width, height: 22)
-            .contentShape(Rectangle())
     }
 }
 
