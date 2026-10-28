@@ -8,6 +8,8 @@
     <string>Granular</string>
     <key>CFBundleExecutable</key>
     <string>Granular</string>
+    <key>NSAccentColorName</key>
+    <string>AccentColor</string>
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleIconFile</key>

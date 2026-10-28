@@ -74,6 +74,7 @@ xcrun actool \
     --platform macosx \
     --minimum-deployment-target 26.0 \
     --app-icon AppIcon \
+    --accent-color AccentColor \
     --output-partial-info-plist "$ROOT/.build/Granular-asset-info.plist"
 
 # Icon Composer's macOS fallback can omit several legacy ICNS sizes. Finder
