@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Edit menu: carrying a look from one photo to the next. Undo and Redo are
-/// the system's own items, driven by the main window's undo manager.
+/// DMKit's `UndoCommands`, titled from the key window's undo manager.
 struct EditCommands: Commands {
     let model: AppModel
 

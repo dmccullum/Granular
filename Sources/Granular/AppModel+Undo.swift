@@ -18,9 +18,9 @@ struct OpenUndoStep {
 
 // Undo and redo for the adjustments, and copying them from photo to photo.
 //
-// Everything is recorded on the main window's own undo manager, so the
-// standard Edit ▸ Undo and Redo items name each step, and text being typed in
-// a field still undoes as text, ahead of the adjustments.
+// Everything is recorded on the main window's own undo manager, so Edit ▸
+// Undo and Redo (DMKit's `UndoCommands`) name each step, and text being typed
+// in a field still undoes as text, ahead of the adjustments.
 extension AppModel {
     var editState: RecipeEditState {
         RecipeEditState(recipe: recipe, selectedRecipeID: selectedRecipeID)
