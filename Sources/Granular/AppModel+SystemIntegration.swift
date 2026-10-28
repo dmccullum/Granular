@@ -41,9 +41,6 @@ extension AppModel {
             )
             outputs.append(output)
         }
-        statusMessage = outputs.count == 1
-            ? "Shortcuts processed \(outputs[0].lastPathComponent)"
-            : "Shortcuts processed \(outputs.count) images"
         return outputs
     }
 }

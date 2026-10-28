@@ -19,7 +19,6 @@ extension AppModel {
     func startWatching() {
         guard let input = watchedInputFolder, let output = watchedOutputFolder else {
             let message = "Choose both watched folders first."
-            statusMessage = message
             watchErrorMessage = message
             watchStatusMessage = message
             isWatching = false
@@ -27,7 +26,6 @@ extension AppModel {
         }
         guard Self.isExistingDirectory(input) else {
             let message = "Incoming folder is no longer available. Choose it again."
-            statusMessage = message
             watchErrorMessage = message
             watchStatusMessage = message
             isWatching = false
@@ -35,7 +33,6 @@ extension AppModel {
         }
         guard Self.isExistingDirectory(output) else {
             let message = "Finished folder is no longer available. Choose it again."
-            statusMessage = message
             watchErrorMessage = message
             watchStatusMessage = message
             isWatching = false
@@ -43,7 +40,6 @@ extension AppModel {
         }
         guard input.standardizedFileURL != output.standardizedFileURL else {
             let message = "Incoming and Finished must be different folders."
-            statusMessage = message
             watchErrorMessage = message
             watchStatusMessage = message
             isWatching = false
@@ -51,7 +47,6 @@ extension AppModel {
         }
         guard !output.path.hasPrefix(input.path + "/") else {
             let message = "Finished cannot be inside Incoming."
-            statusMessage = message
             watchErrorMessage = message
             watchStatusMessage = message
             isWatching = false
@@ -68,7 +63,6 @@ extension AppModel {
         UserDefaults.standard.set(true, forKey: SettingsKey.wasWatching)
         watchErrorMessage = nil
         watchStatusMessage = "Watching \(input.lastPathComponent)"
-        statusMessage = watchStatusMessage
         Task { [weak self] in
             await monitor.start(folder: input) { [weak self] urls in
                 guard let self else { return [] }
@@ -91,7 +85,6 @@ extension AppModel {
         UserDefaults.standard.set(false, forKey: SettingsKey.wasWatching)
         watchErrorMessage = nil
         watchStatusMessage = "Watching paused"
-        statusMessage = watchStatusMessage
     }
 
     /// Picks watching back up where the last launch left it. Only a deliberate
@@ -114,9 +107,7 @@ extension AppModel {
             }
             return nil
         } catch {
-            let message = "Launch at Login: \(error.localizedDescription)"
-            statusMessage = message
-            return message
+            return "Launch at Login: \(error.localizedDescription)"
         }
     }
 
@@ -140,7 +131,10 @@ extension AppModel {
             watchErrorMessage = nil
             return true
         } catch {
-            statusMessage = "Couldn’t remember that folder: \(error.localizedDescription)"
+            editorAlert = EditorAlert(
+                title: "Granular can’t use “\(url.lastPathComponent)”.",
+                message: error.localizedDescription
+            )
             return false
         }
     }
@@ -151,7 +145,6 @@ extension AppModel {
         isWatching = false
         watchErrorMessage = message
         watchStatusMessage = message
-        statusMessage = message
     }
 
     func restoreFolder(forKey key: String, assignment: (URL) -> Void) {

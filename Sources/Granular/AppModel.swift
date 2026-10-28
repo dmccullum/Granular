@@ -126,7 +126,6 @@ final class AppModel {
     var isRenderingPreview = false
     var isExporting = false
     var jobs: [ProcessingJob] = []
-    var statusMessage = "Ready"
     var watchStatusMessage = "Choose Incoming and Finished folders, then start watching."
     var watchErrorMessage: String?
     var startupError: String?

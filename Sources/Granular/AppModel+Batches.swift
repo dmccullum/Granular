@@ -32,7 +32,6 @@ extension AppModel {
     func cancelInstantProcessing() {
         guard canCancelProcessing else { return }
         instantBatch?.progress.isCancelled = true
-        statusMessage = "Stopping after this image…"
     }
 
     func beginBatch(of count: Int, isWatched: Bool, asksWhereToSave: Bool = false) -> UUID {
@@ -106,9 +105,6 @@ extension AppModel {
         updateDockProgress()
 
         let progress = finished.progress
-        if progress.isCancelled {
-            statusMessage = "Cancelled after \(progress.completed) of \(progress.total)"
-        }
         if !NSApp.isActive, progress.completed > 0 {
             let title: String
             if finished.isWatched {

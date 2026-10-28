@@ -8,9 +8,19 @@ import UniformTypeIdentifiers
 
 // Instant mode: processing images straight to the output folder.
 extension AppModel {
-    func chooseDropOutputFolder() {
-        guard let url = chooseFolder(title: "Choose Instant Output Folder") else { return }
+    /// Returns whether a folder was chosen and is now the output folder.
+    @discardableResult
+    func chooseDropOutputFolder() -> Bool {
+        guard let url = chooseFolder(title: "Choose Instant Output Folder") else { return false }
         useDropOutputFolder(url)
+        return dropOutputFolder == url
+    }
+
+    /// Choose Folder… in an alert about the output folder: once one is
+    /// chosen, the images that couldn’t be processed are processed into it.
+    func chooseDropOutputFolder(thenProcessing urls: [URL]) {
+        guard chooseDropOutputFolder(), !urls.isEmpty else { return }
+        Task { await processInstantly(urls) }
     }
 
     func chooseWatchedInputFolder() {
@@ -34,7 +44,9 @@ extension AppModel {
         persistRecipeSelection()
         let supported = urls.filter(Self.isSupportedImage)
         guard !supported.isEmpty else {
-            statusMessage = "No supported images in that drop"
+            if destinationOverride == nil, !urls.isEmpty {
+                editorAlert = .unopened(urls)
+            }
             return []
         }
 
@@ -46,7 +58,10 @@ extension AppModel {
             do {
                 destination = try UnsavedOutputs.makeFolder()
             } catch {
-                statusMessage = "Couldn’t prepare a place to develop the images: \(error.localizedDescription)"
+                editorAlert = EditorAlert(
+                    title: "Granular couldn’t prepare a place to develop the images.",
+                    message: error.localizedDescription
+                )
                 return []
             }
         } else {
@@ -54,15 +69,17 @@ extension AppModel {
                 chooseDropOutputFolder()
             }
             guard let chosen = destinationOverride ?? dropOutputFolder else {
-                statusMessage = "Choose an output folder to continue"
+                // The folder chooser was cancelled.
+                showEditorNotice(supported.count == 1
+                    ? "Not processed: no output folder chosen"
+                    : "\(supported.count) images not processed: no output folder chosen")
                 return []
             }
             guard Self.isExistingDirectory(chosen) else {
-                let message = destinationOverride == nil
-                    ? "Instant output folder is no longer available. Choose it again."
-                    : "Finished folder is no longer available. Choose it again."
-                statusMessage = message
-                if destinationOverride != nil {
+                if destinationOverride == nil {
+                    editorAlert = .outputFolderMissing(chosen, retrying: urls)
+                } else {
+                    let message = "Finished folder is no longer available. Choose it again."
                     watchErrorMessage = message
                     watchStatusMessage = message
                 }
@@ -71,7 +88,12 @@ extension AppModel {
             destination = chosen
         }
         guard let processingService else {
-            statusMessage = startupError ?? "The image engine is unavailable"
+            if destinationOverride == nil {
+                editorAlert = EditorAlert(
+                    title: "Granular can’t process images.",
+                    message: startupError ?? "The image engine is unavailable."
+                )
+            }
             return []
         }
 
@@ -79,7 +101,7 @@ extension AppModel {
         defer { endBatchRun(batchID) }
 
         var completed: Set<URL> = []
-        for url in supported {
+        for (index, url) in supported.enumerated() {
             // Cancelling stops between images; the one in the gate still finishes.
             guard !isBatchCancelled(batchID) else { break }
 
@@ -90,7 +112,6 @@ extension AppModel {
                 jobDestinationOverrides[id] = destinationOverride
             }
             updateJob(id, state: .processing)
-            statusMessage = "Processing \(url.lastPathComponent)…"
 
             let gainedSourceAccess = url.startAccessingSecurityScopedResource()
             defer {
@@ -105,7 +126,6 @@ extension AppModel {
                     options: outputOptions
                 )
                 updateJob(id, state: .finished(output))
-                statusMessage = "Finished \(url.lastPathComponent)"
                 completed.insert(url)
                 if asksWhereToSave {
                     unsavedJobIDs.insert(id)
@@ -119,22 +139,39 @@ extension AppModel {
             } catch {
                 updateJob(id, state: .failed(error.localizedDescription))
                 let message = "Couldn’t process \(url.lastPathComponent): \(error.localizedDescription)"
-                statusMessage = message
                 recordBatchResult(batchID, output: nil)
                 if destinationOverride != nil {
                     watchErrorMessage = message
                     watchStatusMessage = message
+                } else if !asksWhereToSave, Self.isWritePermissionError(error) {
+                    // Every image would fail the same way: stop, and offer another folder.
+                    editorAlert = .outputFolderUnwritable(destination, retrying: Array(supported[index...]))
+                    cancelInstantProcessing()
+                    break
                 }
             }
         }
         // Say so when part of a drop wasn’t something Granular can read.
         let skipped = urls.count - supported.count
-        if skipped > 0, !isBatchCancelled(batchID) {
-            statusMessage = skipped == 1
+        if skipped > 0, destinationOverride == nil, !isBatchCancelled(batchID) {
+            showEditorNotice(skipped == 1
                 ? "Skipped 1 file that isn’t a supported image"
-                : "Skipped \(skipped) files that aren’t supported images"
+                : "Skipped \(skipped) files that aren’t supported images")
         }
         return completed
+    }
+
+    private static func isWritePermissionError(_ error: Error) -> Bool {
+        let error = error as NSError
+        switch error.domain {
+        case NSCocoaErrorDomain where [NSFileWriteNoPermissionError, NSFileWriteVolumeReadOnlyError].contains(error.code):
+            return true
+        case NSPOSIXErrorDomain where [EACCES, EPERM, EROFS].contains(Int32(error.code)):
+            return true
+        default:
+            guard let underlying = error.userInfo[NSUnderlyingErrorKey] as? Error else { return false }
+            return isWritePermissionError(underlying)
+        }
     }
 
     func reveal(_ url: URL?) {
@@ -212,7 +249,10 @@ extension AppModel {
         do {
             try FileManager.default.trashItem(at: output, resultingItemURL: &trashedURL)
         } catch {
-            statusMessage = "Couldn’t move \(output.lastPathComponent) to the Trash: \(error.localizedDescription)"
+            editorAlert = EditorAlert(
+                title: "“\(output.lastPathComponent)” couldn’t be moved to the Trash.",
+                message: error.localizedDescription
+            )
             return
         }
         let job = jobs.remove(at: index)
@@ -242,7 +282,10 @@ extension AppModel {
             try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
             try FileManager.default.moveItem(at: trashedURL, to: output)
         } catch {
-            statusMessage = "Couldn’t put back \(output.lastPathComponent): \(error.localizedDescription)"
+            editorAlert = EditorAlert(
+                title: "“\(output.lastPathComponent)” couldn’t be put back from the Trash.",
+                message: error.localizedDescription
+            )
             return
         }
         var job = job
@@ -289,7 +332,7 @@ extension AppModel {
             if gainedAccess { url.stopAccessingSecurityScopedResource() }
         }
         guard Self.isExistingDirectory(url) else {
-            statusMessage = "“\(url.lastPathComponent)” is no longer available"
+            editorAlert = .outputFolderMissing(url, retrying: [])
             recentDropOutputFolders = recentOutputFolders().filter { $0 != url }
             saveRecentDropOutputFolders()
             return

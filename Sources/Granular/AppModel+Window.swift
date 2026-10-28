@@ -10,9 +10,6 @@ import UniformTypeIdentifiers
 extension AppModel {
     func modeDidChange() {
         UserDefaults.standard.set(operationMode.rawValue, forKey: SettingsKey.lastMode)
-        if operationMode == .drop, jobs.isEmpty {
-            statusMessage = "Ready"
-        }
     }
 
     /// A switch happens in two steps. The views answer the new mode first,

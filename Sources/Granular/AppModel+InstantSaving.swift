@@ -149,9 +149,11 @@ extension AppModel {
             do {
                 try move(first.file, to: destination, replacing: true)
                 markSaved(first.id, at: destination)
-                statusMessage = "Saved “\(destination.lastPathComponent)”"
             } catch {
-                statusMessage = "Couldn’t save “\(destination.lastPathComponent)”: \(error.localizedDescription)"
+                editorAlert = EditorAlert(
+                    title: "“\(destination.lastPathComponent)” couldn’t be saved.",
+                    message: "\(error.localizedDescription)\n\nThe image is still on the film strip, unsaved."
+                )
             }
             return
         }
@@ -184,17 +186,19 @@ extension AppModel {
             }
         }
         if let lastError {
-            statusMessage = "Saved \(saved) of \(frames.count) to “\(folder.lastPathComponent)”: \(lastError.localizedDescription)"
-        } else {
-            statusMessage = "Saved \(saved) \(saved == 1 ? "image" : "images") to “\(folder.lastPathComponent)”"
+            let failed = frames.count - saved
+            editorAlert = EditorAlert(
+                title: "\(failed) of \(frames.count) images couldn’t be saved to “\(folder.lastPathComponent)”.",
+                message: "\(lastError.localizedDescription)\n\n\(failed == 1 ? "It’s" : "They’re") still on the film strip, unsaved."
+            )
         }
     }
 
     /// Leaves the frames on the strip, marked, for the person to save later.
     private func noteUnsaved(count: Int) {
-        statusMessage = count == 1
+        showEditorNotice(count == 1
             ? "Not saved yet. Right-click the frame to save it."
-            : "\(count) images not saved yet. Use Save… to choose a folder."
+            : "\(count) images not saved yet. Use Save… to choose a folder.")
     }
 
     /// A sheet on the main window when there is one, so the panel belongs to

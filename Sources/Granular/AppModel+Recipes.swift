@@ -66,7 +66,6 @@ extension AppModel {
             persistRecipes()
             selectRecipe(recipe, recordingUndo: false)
         }
-        statusMessage = "Saved recipe “\(name)”"
         return recipe
     }
 
@@ -80,7 +79,6 @@ extension AppModel {
             persistRecipes()
             persistRecipeSelection()
         }
-        statusMessage = "Updated recipe “\(updated.name)”"
     }
 
     /// Deletes the recipe in use. Only saved recipes can be deleted.
@@ -92,7 +90,6 @@ extension AppModel {
     /// simply no longer belongs to a saved recipe.
     func deleteRecipe(id: String, in window: RecipeWindow? = nil) {
         guard let index = savedRecipes.firstIndex(where: { $0.id == id }) else { return }
-        let name = savedRecipes[index].name
         changeRecipes("Delete Recipe", in: window) {
             savedRecipes.remove(at: index)
             persistRecipes()
@@ -102,7 +99,6 @@ extension AppModel {
                 persistRecipeSelection()
             }
         }
-        statusMessage = "Deleted recipe “\(name)”"
     }
 
     func renameRecipe(id: String, to proposedName: String) -> Bool {
@@ -119,7 +115,6 @@ extension AppModel {
             }
             persistRecipes()
         }
-        statusMessage = "Renamed recipe to “\(name)”"
         return true
     }
 
@@ -145,7 +140,6 @@ extension AppModel {
             savedRecipes.insert(copy, at: duplicateIndex(for: id))
             persistRecipes()
         }
-        statusMessage = "Duplicated as “\(copy.name)”"
         return copy
     }
 
@@ -162,7 +156,6 @@ extension AppModel {
             persistRecipeSelection()
         }
         recipeLibrarySelection = copy.id
-        statusMessage = "Duplicated as “\(copy.name)”"
     }
 
     private func makeDuplicate(of id: String) -> FilmRecipe? {

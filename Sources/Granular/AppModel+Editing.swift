@@ -93,7 +93,6 @@ extension AppModel {
         editorNotice = nil
         // Switching modes starts the window's resize.
         operationMode = .edit
-        statusMessage = "Rendering preview…"
         schedulePreview()
         return true
     }
@@ -139,7 +138,6 @@ extension AppModel {
         processedPreview = nil
         showOriginal = false
         isRenderingPreview = false
-        statusMessage = "Ready"
     }
 
     /// Sends images that arrived in Edit mode over to Instant mode to be processed.
@@ -282,10 +280,8 @@ extension AppModel {
                 guard !Task.isCancelled else { return }
                 processedPreview = NSImage(cgImage: image, size: .zero)
                 renderedPreviewDimension = dimension
-                statusMessage = sourceURL.lastPathComponent
             } catch {
                 guard !Task.isCancelled else { return }
-                statusMessage = "Preview failed: \(error.localizedDescription)"
             }
         }
         guard !Task.isCancelled else { return }
@@ -374,7 +370,6 @@ extension AppModel {
         let job = ProcessingJob(sourceURL: sourceURL, state: .processing)
         jobs.insert(job, at: 0)
         isExporting = true
-        statusMessage = "Exporting \(destinationURL.lastPathComponent)…"
         defer { isExporting = false }
 
         do {
@@ -385,11 +380,9 @@ extension AppModel {
                 options: outputOptions
             )
             updateJob(job.id, state: .finished(output))
-            statusMessage = "Exported \(output.lastPathComponent)"
             showEditorNotice("Exported “\(output.lastPathComponent)”", action: .reveal(output))
         } catch {
             updateJob(job.id, state: .failed(error.localizedDescription))
-            statusMessage = "Export failed: \(error.localizedDescription)"
             editorAlert = .exportFailed(sourceURL, reason: error.localizedDescription)
         }
     }
@@ -487,9 +480,16 @@ enum RecentImageStore {
 }
 
 struct EditorAlert: Identifiable {
+    enum Action {
+        /// Choose Folder… for Instant's output, then process the images that
+        /// couldn't be, if any.
+        case chooseDropOutputFolder(retrying: [URL])
+    }
+
     let id = UUID()
     let title: String
     let message: String
+    var action: Action?
 
     /// Files that aren’t images Granular can read, named so it’s clear which.
     @MainActor static func unopened(_ urls: [URL]) -> EditorAlert {
@@ -510,6 +510,22 @@ struct EditorAlert: Identifiable {
         EditorAlert(
             title: "“\(url.lastPathComponent)” can’t be found.",
             message: "It may have been moved, renamed, or deleted."
+        )
+    }
+
+    static func outputFolderMissing(_ folder: URL, retrying urls: [URL]) -> EditorAlert {
+        EditorAlert(
+            title: "The output folder “\(folder.lastPathComponent)” can’t be found.",
+            message: "It may have been moved, renamed, or deleted, or its disk may be disconnected. Choose another folder for the processed images.",
+            action: .chooseDropOutputFolder(retrying: urls)
+        )
+    }
+
+    static func outputFolderUnwritable(_ folder: URL, retrying urls: [URL]) -> EditorAlert {
+        EditorAlert(
+            title: "Granular can’t save to the output folder “\(folder.lastPathComponent)”.",
+            message: "You don’t have permission to add files to it. Choose another folder for the processed images.",
+            action: .chooseDropOutputFolder(retrying: urls)
         )
     }
 

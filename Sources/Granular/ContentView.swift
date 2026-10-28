@@ -129,8 +129,16 @@ struct ContentView: View {
                 set: { if !$0 { model.editorAlert = nil } }
             ),
             presenting: model.editorAlert,
-            actions: { _ in
-                Button("OK", role: .cancel) {}
+            actions: { alert in
+                if case .chooseDropOutputFolder(let urls) = alert.action {
+                    Button("Choose Folder…") {
+                        // After the alert is gone, so the panel isn't opened under it.
+                        Task { model.chooseDropOutputFolder(thenProcessing: urls) }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } else {
+                    Button("OK", role: .cancel) {}
+                }
             },
             message: { alert in
                 Text(alert.message)

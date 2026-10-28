@@ -65,9 +65,6 @@ extension AppModel {
                 persistRecipes()
             }
             recipeLibrarySelection = imported.last?.id
-            statusMessage = imported.count == 1
-                ? "Imported recipe “\(imported[0].name)”"
-                : "Imported \(imported.count) recipes"
         }
         if let failure = failures.first {
             recipeLibraryAlert = RecipeLibraryAlert(
@@ -108,7 +105,6 @@ extension AppModel {
             guard response == .OK, let url = panel.url else { return }
             do {
                 try RecipeFile(recipe: recipe).encoded().write(to: url, options: .atomic)
-                self?.statusMessage = "Exported recipe “\(recipe.name)”"
             } catch {
                 self?.recipeLibraryAlert = RecipeLibraryAlert(
                     title: "“\(recipe.name)” couldn’t be exported.",
