@@ -6,7 +6,6 @@ import Foundation
 /// Hands the app’s one model to the parts of macOS that call in from outside
 /// its windows: Shortcuts actions and the Services menu. Runs as the app is
 /// created, so it’s in place even when one of those is what launched Granular.
-@MainActor
 enum SystemIntegration {
     static func connect(_ model: AppModel) {
         AppDependencyManager.shared.add(dependency: model)
@@ -45,7 +44,7 @@ extension AppModel {
     }
 }
 
-enum ShortcutError: Error, CustomLocalizedStringResourceConvertible {
+nonisolated enum ShortcutError: Error, CustomLocalizedStringResourceConvertible {
     case noImages
     case noOutputFolder
     case folderUnavailable(String)

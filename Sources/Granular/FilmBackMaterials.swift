@@ -21,7 +21,7 @@ enum FilmBackPalette {
     static let ink = Color(hex: 0x141414)
 }
 
-struct SeededGenerator: RandomNumberGenerator {
+nonisolated struct SeededGenerator: RandomNumberGenerator {
     private var state: UInt64
 
     init(seed: UInt64) {
@@ -68,7 +68,6 @@ struct AlloySurface: View {
 }
 
 /// A seeded tile of fine light and dark specks for the blasted-metal grain.
-@MainActor
 private enum AlloyGrain {
     static let tile: CGImage = {
         let size = 192

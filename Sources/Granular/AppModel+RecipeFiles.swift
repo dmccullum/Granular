@@ -16,7 +16,6 @@ extension Notification.Name {
 /// Recipe files opened from the Finder or dropped on the Dock icon. They wait
 /// here until a window can import them, since at launch they can arrive
 /// before any window is listening.
-@MainActor
 enum RecipeFileInbox {
     private static var pending: [URL] = []
 

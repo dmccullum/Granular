@@ -491,7 +491,7 @@ struct FilmCanisterView: View {
     }
 }
 
-private struct TapeShape: Shape {
+private nonisolated struct TapeShape: Shape {
     func path(in rect: CGRect) -> Path {
         let points: [(CGFloat, CGFloat)] = [
             (0, 0.05), (0.04, 0), (0.30, 0.03), (0.62, 0), (0.96, 0.03), (1, 0),

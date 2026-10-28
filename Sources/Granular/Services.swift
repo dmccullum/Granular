@@ -4,7 +4,6 @@ import AppKit
 /// app that offers files. They’re processed with the current recipe, just as
 /// if they’d been dropped on the film strip. Declared under NSServices in
 /// Info.plist, so macOS launches Granular to handle it if it isn’t running.
-@MainActor
 final class ImageServiceProvider: NSObject {
     static let shared = ImageServiceProvider()
 

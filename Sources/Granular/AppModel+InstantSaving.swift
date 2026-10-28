@@ -3,14 +3,14 @@ import GranularCore
 import Foundation
 import UniformTypeIdentifiers
 
-enum InstantOutputKey {
+nonisolated enum InstantOutputKey {
     static let asksEachTime = "settings.instantAsksEachTime"
 }
 
 /// Where Ask Each Time develops frames until they’re saved. Each drop gets its
 /// own folder, so the files keep their real names. Whatever is left is cleared
 /// at the next drop after launch, and at quit.
-enum UnsavedOutputs {
+nonisolated enum UnsavedOutputs {
     private static var root: URL {
         FileManager.default.temporaryDirectory.appending(path: "Granular Unsaved", directoryHint: .isDirectory)
     }

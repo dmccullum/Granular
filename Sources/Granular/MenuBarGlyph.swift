@@ -3,7 +3,6 @@ import AppKit
 /// Granular’s menu bar icon: a 35 mm film canister with its leader out, drawn
 /// as a template so the menu bar tints it for light, dark and tinted menu bars.
 /// The canister fills in while a watched folder is being watched.
-@MainActor
 enum MenuBarGlyph {
     static func image(isWatching: Bool) -> NSImage {
         isWatching ? filled : outlined

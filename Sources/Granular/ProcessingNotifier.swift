@@ -3,7 +3,6 @@ import UserNotifications
 
 /// Posts one summary when a batch or a watched-folder burst finishes while
 /// Granular is in the background. Clicking it reveals what was made.
-@MainActor
 final class ProcessingNotifier: NSObject {
     static let shared = ProcessingNotifier()
 

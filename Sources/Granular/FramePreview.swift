@@ -10,7 +10,6 @@ struct PreviewFrame: Equatable {
 
 /// Quick Look for the selected frame on the film strip. Space opens the
 /// panel, and while it’s open the arrow keys step along the strip, as in Finder.
-@MainActor
 final class FramePreviewController: NSResponder {
     static let shared = FramePreviewController()
 

@@ -221,7 +221,6 @@ private extension OperationMode {
 }
 
 /// Shows the recipe menu from a custom control, such as Instant mode's film canister.
-@MainActor
 enum RecipeMenuPresenter {
     static func popUp(model: AppModel) {
         let controller = RecipeMenuController(model: model)
@@ -237,7 +236,6 @@ enum RecipeMenuPresenter {
     }
 }
 
-@MainActor
 final class RecipeMenuController: NSObject {
     private var model: AppModel
     private var selectedRecipeID = ""

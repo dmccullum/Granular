@@ -8,7 +8,6 @@ extension Notification.Name {
     static let granularOpenRecentImage = Notification.Name("GranularOpenRecentImage")
 }
 
-@MainActor
 final class GranularApplicationDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
         ProcessingNotifier.shared.becomeDelegate()

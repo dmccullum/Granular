@@ -312,7 +312,6 @@ struct DropModeView: View {
 
 /// Thumbnails of the frames on the strip. Lives outside the view so the
 /// negatives survive a trip to Edit mode and back.
-@MainActor
 @Observable
 final class FilmRoll {
     static let shared = FilmRoll()
@@ -327,7 +326,7 @@ final class FilmRoll {
     @ObservationIgnored var isDraggingFrame = false
 }
 
-struct FilmThumbnail: @unchecked Sendable {
+nonisolated struct FilmThumbnail: @unchecked Sendable {
     let image: CGImage
 
     static func load(
@@ -1138,7 +1137,7 @@ private struct GreasePencilMark: View {
 /// The processed file as something to drag or copy. It is offered as the file
 /// itself, so Finder and other apps take its real name instead of naming it
 /// after its type, along with its image type for apps that want the picture.
-enum OutputFile {
+nonisolated enum OutputFile {
     static func itemProvider(for url: URL) -> NSItemProvider {
         let provider = NSItemProvider(object: url as NSURL)
         provider.suggestedName = url.deletingPathExtension().lastPathComponent
@@ -1175,7 +1174,6 @@ private struct OutputDrag: ViewModifier {
     }
 }
 
-@MainActor
 private final class FrameDragSource: NSObject, NSDraggingSource {
     private var isDragging = false
 

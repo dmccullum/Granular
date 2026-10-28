@@ -1,7 +1,6 @@
 import AppKit
 
 /// Progress and the finished-while-away badge on Granular’s Dock icon.
-@MainActor
 enum DockTile {
     private static var progressView: DockProgressView?
 

@@ -60,7 +60,6 @@ struct ProcessingJob: Identifiable {
     var state: JobState
 }
 
-@MainActor
 @Observable
 final class AppModel {
     var operationMode: OperationMode = .drop {

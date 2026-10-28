@@ -31,7 +31,10 @@ let package = Package(
         .executableTarget(
             name: "Granular",
             dependencies: ["GranularCore"],
-            path: "Sources/Granular"
+            path: "Sources/Granular",
+            swiftSettings: [
+                .defaultIsolation(MainActor.self)
+            ]
         ),
         .testTarget(
             name: "GranularCoreTests",

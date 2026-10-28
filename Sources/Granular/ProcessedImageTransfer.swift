@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 // while the image and its settings stay the same, so doing it again is instant.
 
 /// Everything a full-size render depends on.
-struct TransferRenderKey: Equatable, Sendable {
+nonisolated struct TransferRenderKey: Equatable, Sendable {
     let sourceURL: URL
     let recipe: FilmRecipe
     let options: OutputOptions
@@ -137,7 +137,6 @@ extension AppModel {
 
 /// The standard share picker, offering the processed image as a file that is
 /// rendered, if it isn’t already, only once a service asks for it.
-@MainActor
 final class ProcessedImageSharePicker: NSObject, @preconcurrency NSSharingServicePickerDelegate {
     private let picker: NSSharingServicePicker
     private weak var model: AppModel?
@@ -197,7 +196,7 @@ final class ProcessedImageSharePicker: NSObject, @preconcurrency NSSharingServic
 /// The processed image as something to share from File ▸ Share. Nothing
 /// renders until a service asks for the file, and the file it gets carries
 /// the export name.
-struct ProcessedImageItem: Transferable {
+nonisolated struct ProcessedImageItem: Transferable {
     let contentType: UTType
     let model: AppModel
 
@@ -219,7 +218,7 @@ struct ProcessedImageItem: Transferable {
 
 /// Temporary renders for sharing, dragging and copying. Each lives in its own
 /// folder so it can keep the export name; all are removed at launch and quit.
-enum TransferFiles {
+nonisolated enum TransferFiles {
     private static var root: URL {
         FileManager.default.temporaryDirectory.appending(path: "Granular Transfers", directoryHint: .isDirectory)
     }
@@ -303,7 +302,6 @@ private struct ProcessedImageDragSource: ViewModifier {
 
 /// Starts an AppKit drag of a file promise, so the full-size render happens
 /// only once the image lands, straight into the place it was dropped.
-@MainActor
 private final class ProcessedImageDraggingSource: NSObject, NSDraggingSource {
     private(set) var isDragging = false
 
@@ -361,7 +359,7 @@ private final class ProcessedImageDraggingSource: NSObject, NSDraggingSource {
 /// Left to itself, the name is only promised, to be asked for later; a
 /// receiver that reads it before the render is done, or doesn’t ask, names
 /// the file after its type instead (“JPEG image”).
-private final class NamedFilePromiseProvider: NSFilePromiseProvider {
+private nonisolated final class NamedFilePromiseProvider: NSFilePromiseProvider {
     private static let suggestedFileNameType = NSPasteboard.PasteboardType(
         "com.apple.pasteboard.promised-suggested-file-name"
     )
@@ -379,7 +377,7 @@ private final class NamedFilePromiseProvider: NSFilePromiseProvider {
 
 /// Writes the promised file: waits for the render, then copies it to exactly
 /// the place the receiving app asked for.
-private final class ProcessedImagePromise: NSObject, NSFilePromiseProviderDelegate, Sendable {
+private nonisolated final class ProcessedImagePromise: NSObject, NSFilePromiseProviderDelegate, Sendable {
     private let fileName: String
     private let render: @Sendable @MainActor () async throws -> URL
 
@@ -411,6 +409,6 @@ private final class ProcessedImagePromise: NSObject, NSFilePromiseProviderDelega
 }
 
 /// AppKit’s promise completion handler may be called from any thread.
-private struct UncheckedCompletion: @unchecked Sendable {
+private nonisolated struct UncheckedCompletion: @unchecked Sendable {
     let handler: (Error?) -> Void
 }

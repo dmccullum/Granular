@@ -492,7 +492,7 @@ struct EditorAlert: Identifiable {
     var action: Action?
 
     /// Files that aren’t images Granular can read, named so it’s clear which.
-    @MainActor static func unopened(_ urls: [URL]) -> EditorAlert {
+    static func unopened(_ urls: [URL]) -> EditorAlert {
         let formats = "Granular opens JPEG, HEIC, PNG, TIFF, WebP, and AVIF images."
         if urls.count == 1, let url = urls.first {
             let reason = AppModel.isSupportedImage(url)

@@ -143,7 +143,6 @@ struct MenuBarStatusView: View {
 }
 
 /// Small images for menu items, drawn once and kept.
-@MainActor
 private enum MenuIcons {
     private static var canisters: [String: NSImage] = [:]
     private static var files: [URL: NSImage] = [:]

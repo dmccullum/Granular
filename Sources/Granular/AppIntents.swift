@@ -170,7 +170,6 @@ struct GranularShortcuts: AppShortcutsProvider {
 /// The images a shortcut hands over, as files Granular can read. Shortcuts
 /// usually passes files it has already granted access to; anything else (a
 /// photo from Photos, say) arrives as data and is written out for the run.
-@MainActor
 private struct ShortcutInputs {
     private(set) var urls: [URL] = []
     private var scopedURLs: [URL] = []

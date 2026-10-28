@@ -3,7 +3,6 @@ import GranularCore
 import Observation
 import SwiftUI
 
-@MainActor
 @Observable
 final class ViewerZoomController {
     /// Zoom in device pixels: 1 is 100%, one image pixel per screen pixel.
@@ -1086,7 +1085,6 @@ struct EditorShareButton: View {
 }
 
 /// The view the share picker points at.
-@MainActor
 private final class ShareAnchor {
     weak var view: NSView?
 }

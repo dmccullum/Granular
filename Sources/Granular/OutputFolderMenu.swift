@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 
 /// The view a SwiftUI control pops an AppKit menu from.
-@MainActor
 final class MenuAnchor {
     weak var view: NSView?
 }
@@ -23,7 +22,6 @@ struct MenuAnchorView: NSViewRepresentable {
 
 /// The Instant output folder’s pop-up menu: Ask Each Time, the current folder
 /// and recent ones, each with its Finder icon, then Choose… and Show in Finder.
-@MainActor
 final class OutputFolderMenu: NSObject {
     private let model: AppModel
 

@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-@MainActor
 final class AboutWindowController: NSWindowController {
     static let shared = AboutWindowController()
 
