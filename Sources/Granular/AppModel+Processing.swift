@@ -201,22 +201,61 @@ extension AppModel {
         reveal(job(id)?.sourceURL)
     }
 
+    /// Moves a frame's file to the Trash and takes it off the strip, as one
+    /// step on Edit ▸ Undo. An unsaved frame is “discarded”: its only copy goes
+    /// to the Trash too, so Undo, or the Trash, can bring it back.
     func moveOutputToTrash(of id: UUID) {
         guard let index = jobs.firstIndex(where: { $0.id == id }),
               case .finished(let output) = jobs[index].state else { return }
-        // An unsaved frame only exists in the temporary folder: discarding it is final.
-        if unsavedJobIDs.contains(id) {
-            discardUnsaved(id)
-            return
-        }
+        let wasUnsaved = unsavedJobIDs.contains(id)
+        var trashedURL: NSURL?
         do {
-            try FileManager.default.trashItem(at: output, resultingItemURL: nil)
-            jobs.remove(at: index)
-            jobDestinationOverrides[id] = nil
-            statusMessage = "Moved \(output.lastPathComponent) to the Trash"
+            try FileManager.default.trashItem(at: output, resultingItemURL: &trashedURL)
         } catch {
             statusMessage = "Couldn’t move \(output.lastPathComponent) to the Trash: \(error.localizedDescription)"
+            return
         }
+        let job = jobs.remove(at: index)
+        let destinationOverride = jobDestinationOverrides.removeValue(forKey: id)
+        unsavedJobIDs.remove(id)
+        jobsAwaitingSavePrompt.removeAll { $0 == id }
+
+        guard let trashedURL = trashedURL as URL?, let undoManager else { return }
+        let actionName = wasUnsaved ? "Discard Frame" : "Move to Trash"
+        undoManager.registerUndo(withTarget: self) { model in
+            model.restoreTrashedOutput(
+                job, at: index, from: trashedURL, to: output,
+                wasUnsaved: wasUnsaved, destinationOverride: destinationOverride, actionName: actionName
+            )
+        }
+        undoManager.setActionName(actionName)
+    }
+
+    /// Undoes `moveOutputToTrash`: the file comes back from the Trash and the
+    /// frame goes back where it was on the strip.
+    private func restoreTrashedOutput(
+        _ job: ProcessingJob, at index: Int, from trashedURL: URL, to output: URL,
+        wasUnsaved: Bool, destinationOverride: URL?, actionName: String
+    ) {
+        do {
+            // An unsaved frame's temporary folder may have been cleared since.
+            try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try FileManager.default.moveItem(at: trashedURL, to: output)
+        } catch {
+            statusMessage = "Couldn’t put back \(output.lastPathComponent): \(error.localizedDescription)"
+            return
+        }
+        var job = job
+        job.state = .finished(output)
+        jobs.insert(job, at: min(index, jobs.count))
+        jobDestinationOverrides[job.id] = destinationOverride
+        if wasUnsaved {
+            unsavedJobIDs.insert(job.id)
+        }
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.moveOutputToTrash(of: job.id)
+        }
+        undoManager?.setActionName(actionName)
     }
 
     /// Takes the spoiled frame off the strip and exposes the original again,

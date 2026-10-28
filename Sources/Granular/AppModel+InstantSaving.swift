@@ -223,15 +223,4 @@ extension AppModel {
         unsavedJobIDs.remove(id)
         updateJob(id, state: .finished(destination))
     }
-
-    /// Throws an unsaved frame away: its only copy is in the temporary folder.
-    func discardUnsaved(_ id: UUID) {
-        guard let index = jobs.firstIndex(where: { $0.id == id }),
-              case .finished(let file) = jobs[index].state else { return }
-        UnsavedOutputs.remove(file)
-        unsavedJobIDs.remove(id)
-        jobsAwaitingSavePrompt.removeAll { $0 == id }
-        jobs.remove(at: index)
-        statusMessage = "Discarded \(file.lastPathComponent)"
-    }
 }
