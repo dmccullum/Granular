@@ -651,6 +651,9 @@ private struct CanisterPicker: View {
 }
 
 /// Hands over the window a view is in, once it's in one.
+// TODO(DMKit): DMKit's WindowReader reports on the next turn of the run loop,
+// after the window is on screen. This one reports at once, so the Recipe
+// Library's saved frame applies before it appears.
 private struct WindowReader: NSViewRepresentable {
     let onWindow: (NSWindow) -> Void
 
