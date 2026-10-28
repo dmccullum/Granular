@@ -1256,12 +1256,16 @@ private struct FrameContextMenu: View {
             OpenWithMenu(url: url) { application in
                 model.openOutput(of: frame.id, withApplicationAt: application)
             }
+            Divider()
             if !frame.isUnsaved {
-                Divider()
                 Button("Show in Finder") {
                     model.reveal(url)
                 }
             }
+            Button("Quick Look") {
+                quickLook()
+            }
+            Divider()
             Button("Copy") {
                 model.copyOutput(of: frame.id)
             }
@@ -1285,6 +1289,17 @@ private struct FrameContextMenu: View {
             Button("Show Original in Finder") {
                 model.revealSource(of: frame.id)
             }
+        }
+    }
+
+    /// Marks this frame and shows it in Quick Look, or moves an open panel to it.
+    private func quickLook() {
+        FilmRoll.shared.selectedFrameID = frame.id
+        let preview = FramePreviewController.shared
+        if preview.isPanelVisible {
+            preview.selectionDidChange()
+        } else {
+            preview.togglePanel()
         }
     }
 }
@@ -1563,8 +1578,7 @@ private struct BatchCounter: View {
                         .font(.system(size: 7, weight: .bold))
                 }
                 .buttonStyle(RecessedButtonStyle())
-                .keyboardShortcut(.cancelAction)
-                .help("Cancel processing after this image")
+                .help("Cancel processing after this image (⌘.)")
                 .accessibilityLabel("Cancel Processing")
             }
         }

@@ -187,7 +187,7 @@ private struct OutputSettings: View {
                             }
                             .disabled(model.outputOptions.filenameTemplate == OutputNaming.defaultTemplate)
                         } label: {
-                            Label("Insert", systemImage: "plus")
+                            Text("Insert")
                         }
                         .menuStyle(.button)
                         .buttonStyle(.bordered)
@@ -324,7 +324,7 @@ private struct InstantFolderRow: View {
         LabeledContent("Instant folder") {
             HStack(spacing: 8) {
                 Picker("Instant folder", selection: choice) {
-                    Label("Ask Each Time", systemImage: OutputFolderMenu.askSymbol)
+                    Text("Ask Each Time")
                         .tag(Choice.ask)
                     if model.dropOutputFolder == nil, !model.asksWhereToSaveInstantly {
                         Text("Not selected").tag(Choice.none)

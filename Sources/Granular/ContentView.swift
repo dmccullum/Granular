@@ -220,48 +220,22 @@ private extension OperationMode {
     }
 }
 
-/// Shows the recipe menu from a custom control, such as Instant mode's film canister.
+/// Shows the recipe menu from Instant mode's film canister.
 enum RecipeMenuPresenter {
     static func popUp(model: AppModel) {
         let controller = RecipeMenuController(model: model)
-        controller.update(
-            model: model,
-            selectedRecipeID: model.selectedRecipeID,
-            savedRecipes: model.savedRecipes,
-            operationMode: model.operationMode,
-            isSelectedRecipeCustom: model.isSelectedRecipeCustom,
-            isRecipeModified: model.isRecipeModified
-        )
-        controller.showMenuAtMouseLocation()
+        // Menu items hold their target weakly; keep it while the menu is open.
+        withExtendedLifetime(controller) {
+            controller.showMenuAtMouseLocation()
+        }
     }
 }
 
 final class RecipeMenuController: NSObject {
-    private var model: AppModel
-    private var selectedRecipeID = ""
-    private var savedRecipes: [FilmRecipe] = []
-    private var operationMode: OperationMode = .drop
-    private var isSelectedRecipeCustom = false
-    private var isRecipeModified = false
+    private let model: AppModel
 
     init(model: AppModel) {
         self.model = model
-    }
-
-    func update(
-        model: AppModel,
-        selectedRecipeID: String,
-        savedRecipes: [FilmRecipe],
-        operationMode: OperationMode,
-        isSelectedRecipeCustom: Bool,
-        isRecipeModified: Bool
-    ) {
-        self.model = model
-        self.selectedRecipeID = selectedRecipeID
-        self.savedRecipes = savedRecipes
-        self.operationMode = operationMode
-        self.isSelectedRecipeCustom = isSelectedRecipeCustom
-        self.isRecipeModified = isRecipeModified
     }
 
     func showMenuAtMouseLocation() {
@@ -274,18 +248,6 @@ final class RecipeMenuController: NSObject {
         model.selectRecipe(recipe)
     }
 
-    @objc private func saveRecipe() {
-        model.beginSavingRecipe()
-    }
-
-    @objc private func updateRecipe() {
-        model.updateSelectedRecipe()
-    }
-
-    @objc private func deleteRecipe() {
-        model.deleteCurrentRecipe()
-    }
-
     @objc private func manageRecipes() {
         model.showRecipeLibrary()
     }
@@ -294,7 +256,7 @@ final class RecipeMenuController: NSObject {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        if isRecipeModified {
+        if model.isRecipeModified {
             let custom = NSMenuItem(title: "Custom", action: nil, keyEquivalent: "")
             custom.state = .on
             custom.isEnabled = false
@@ -304,37 +266,15 @@ final class RecipeMenuController: NSObject {
 
         addRecipeSection("Built-in", recipes: FilmRecipe.builtIns, to: menu)
 
-        if !savedRecipes.isEmpty {
+        if !model.savedRecipes.isEmpty {
             menu.addItem(.separator())
-            addRecipeSection("My Recipes", recipes: savedRecipes, to: menu)
-        }
-
-        if operationMode == .edit {
-            menu.addItem(.separator())
-            addAction(
-                "Save New Recipe…",
-                symbol: "plus",
-                action: #selector(saveRecipe),
-                to: menu
-            )
-            if isSelectedRecipeCustom {
-                addAction(
-                    "Update “\(model.currentRecipe.name)”",
-                    symbol: "square.and.arrow.down",
-                    action: #selector(updateRecipe),
-                    to: menu
-                )
-                addAction(
-                    "Delete “\(model.currentRecipe.name)”",
-                    symbol: "trash",
-                    action: #selector(deleteRecipe),
-                    to: menu
-                )
-            }
+            addRecipeSection("My Recipes", recipes: model.savedRecipes, to: menu)
         }
 
         menu.addItem(.separator())
-        addAction("Recipe Library…", symbol: "film.stack", action: #selector(manageRecipes), to: menu)
+        let library = NSMenuItem(title: "Recipe Library…", action: #selector(manageRecipes), keyEquivalent: "")
+        library.target = self
+        menu.addItem(library)
         return menu
     }
 
@@ -344,15 +284,8 @@ final class RecipeMenuController: NSObject {
             let item = NSMenuItem(title: recipe.name, action: #selector(selectRecipe(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = recipe.id
-            item.state = !isRecipeModified && recipe.id == selectedRecipeID ? .on : .off
+            item.state = !model.isRecipeModified && recipe.id == model.selectedRecipeID ? .on : .off
             menu.addItem(item)
         }
-    }
-
-    private func addAction(_ title: String, symbol: String, action: Selector, to menu: NSMenu) {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-        menu.addItem(item)
     }
 }

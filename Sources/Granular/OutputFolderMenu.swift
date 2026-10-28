@@ -52,7 +52,6 @@ final class OutputFolderMenu: NSObject {
         let asks = model.asksWhereToSaveInstantly
         let ask = NSMenuItem(title: "Ask Each Time", action: #selector(askEachTime), keyEquivalent: "")
         ask.target = self
-        ask.image = NSImage(systemSymbolName: Self.askSymbol, accessibilityDescription: nil)
         ask.state = asks ? .on : .off
         ask.toolTip = "Choose where to save after the images are processed"
         menu.addItem(ask)
@@ -90,7 +89,7 @@ final class OutputFolderMenu: NSObject {
         return menu
     }
 
-    /// The glyph for Ask Each Time in the menu, the footer and Settings.
+    /// The glyph for Ask Each Time in the footer.
     static let askSymbol = "folder.badge.questionmark"
 
     private func icon(for folder: URL) -> NSImage {

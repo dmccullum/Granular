@@ -255,6 +255,9 @@ private struct EditorCanvas: View {
                     isFocused: isFocused
                 )
                 .id(model.selectedSourceURL)
+                .contextMenu {
+                    CanvasContextMenu(zoomController: zoomController)
+                }
             } else {
                 EditorEmptyState()
             }
@@ -266,6 +269,47 @@ private struct EditorCanvas: View {
                     }
                     FirstPreviewProgress()
                 }
+            }
+        }
+    }
+}
+
+/// Right-click on the image: the File and View menu commands for it.
+private struct CanvasContextMenu: View {
+    @Environment(AppModel.self) private var model
+    let zoomController: ViewerZoomController
+
+    var body: some View {
+        @Bindable var model = model
+        if let source = model.selectedSourceURL {
+            Button("Copy") {
+                model.copyProcessedImage()
+            }
+            ShareLink(
+                item: model.processedImageItem(for: source),
+                preview: SharePreview(source.deletingPathExtension().lastPathComponent)
+            ) {
+                Text("Share")
+            }
+            Button("Export…") {
+                model.exportEditedImage()
+            }
+            .disabled(model.isExporting)
+
+            Divider()
+
+            Toggle("Show Original", isOn: $model.showOriginal)
+            Button("Zoom to Fit") {
+                zoomController.fit()
+            }
+            Button("Actual Size") {
+                zoomController.actualSize()
+            }
+
+            Divider()
+
+            Button("Show Original File in Finder") {
+                model.reveal(source)
             }
         }
     }
@@ -909,14 +953,9 @@ extension ZoomControls {
         .accessibilityValue(Text(zoomController.scale, format: .percent.precision(.fractionLength(0))))
     }
 
+    /// A menu checkmark marks the current level; macOS 27 hides menu item symbols.
     private func presetButton(_ title: String, isCurrent: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            if isCurrent {
-                Label(title, systemImage: "checkmark")
-            } else {
-                Text(title)
-            }
-        }
+        Toggle(title, isOn: Binding(get: { isCurrent }, set: { _ in action() }))
     }
 }
 
