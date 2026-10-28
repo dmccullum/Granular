@@ -835,8 +835,9 @@ private struct CenterAdjustmentStatusBar: View {
             Text("X \(percentage(position.x))  Y \(percentage(position.y))")
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
+            // Plain, not glass: it sits inside the bar’s own glass.
             Button("Done", action: model.finishCenterAdjustment)
-                .buttonStyle(.glassProminent)
+                .buttonStyle(.borderedProminent)
                 .controlSize(.small)
                 .keyboardShortcut(.return, modifiers: [])
         }
@@ -1009,7 +1010,7 @@ private struct EditorEmptyState: View {
             Button("Open Image…") {
                 model.chooseImageForEditing()
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.borderedProminent)
             .controlSize(.large)
         }
     }
