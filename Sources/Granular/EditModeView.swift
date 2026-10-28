@@ -190,8 +190,9 @@ struct EditModeView: View {
                     return []
                 }
                 // Edit mode shows one image at a time: a drop of several
-                // opens the first and offers the rest to Instant mode.
-                .dropDestination(for: URL.self) { urls, _ in
+                // opens the first and offers the rest to Instant mode. The
+                // family's dashed outline shows while files are over the canvas.
+                .dropTarget(for: URL.self) { urls, _ in
                     model.openForEditing(urls)
                     return !urls.isEmpty
                 }
