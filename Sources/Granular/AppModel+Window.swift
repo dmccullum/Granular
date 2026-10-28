@@ -150,7 +150,9 @@ extension AppModel {
         if mode == .edit {
             applySizeLimits(for: mode, contentHeight: contentHeight, to: window)
         }
-        if animated {
+        // With Reduce Motion the window takes its new size at once; the
+        // views still crossfade.
+        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             // Animate through the window's animator rather than the blocking
             // setFrame(animate:), so SwiftUI keeps drawing while the size changes.
             NSAnimationContext.runAnimationGroup { context in

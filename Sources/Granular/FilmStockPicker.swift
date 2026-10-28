@@ -28,7 +28,7 @@ struct FilmStockPickerButton: View {
             .font(.caption)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, minHeight: 22)
-            .background(Color.black.opacity(0.32), in: RoundedRectangle(cornerRadius: 6))
+            .cardBackground(in: RoundedRectangle(cornerRadius: 6), opacity: 1)
             .contentShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)
@@ -120,6 +120,7 @@ private struct FilmStockGrid: View {
 
 private struct FilmStockTile: View {
     static let width: CGFloat = 84
+    @Environment(\.colorSchemeContrast) private var contrast
 
     let stock: FilmStockID
     let thumbnail: NSImage?
@@ -145,7 +146,7 @@ private struct FilmStockTile: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 6)
                         .strokeBorder(
-                            isSelected ? Color.accentColor : Color.primary.opacity(0.1),
+                            tileEdgeColor(isSelected: isSelected, contrast: contrast),
                             lineWidth: isSelected ? 2.5 : 1
                         )
                 }

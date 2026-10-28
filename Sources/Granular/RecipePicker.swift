@@ -29,7 +29,7 @@ struct RecipeMenu: View {
             .padding(.leading, 10)
             .padding(.trailing, 10)
             .padding(.vertical, 5)
-            .background(.quaternary.opacity(0.34), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .cardBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -166,6 +166,7 @@ private struct RecipeGrid: View {
 
 private struct RecipeTile: View {
     static let width: CGFloat = 84
+    @Environment(\.colorSchemeContrast) private var contrast
 
     let recipe: FilmRecipe
     let isSelected: Bool
@@ -176,11 +177,11 @@ private struct RecipeTile: View {
             VStack(spacing: 4) {
                 MiniCanister(recipe: recipe, height: 88)
                     .frame(width: Self.width, height: 104)
-                    .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+                    .cardBackground(in: RoundedRectangle(cornerRadius: 6), opacity: 0.5, isEdged: false)
                     .overlay {
                         RoundedRectangle(cornerRadius: 6)
                             .strokeBorder(
-                                isSelected ? Color.accentColor : Color.primary.opacity(0.1),
+                                tileEdgeColor(isSelected: isSelected, contrast: contrast),
                                 lineWidth: isSelected ? 2.5 : 1
                             )
                     }

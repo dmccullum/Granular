@@ -244,7 +244,7 @@ struct DropModeView: View {
             break
         case .processing:
             guard exposure?.jobID != job.id else { return }
-            withAnimation(.spring(duration: 0.55)) {
+            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.55)) {
                 exposure = Exposure(jobID: job.id, startedAt: .now)
             }
             loadThumbnail(from: job.sourceURL, for: job.id)
@@ -484,7 +484,7 @@ private struct FilmChamber: View {
                         .frame(width: canisterWidth, height: canisterHeight)
                 }
                 .buttonStyle(CanisterButtonStyle())
-                .help("Choose or save a film recipe")
+                .help("Choose a film recipe")
                 .accessibilityLabel("Recipe: \(recipeName)")
                 .accessibilityHint("Shows the recipe menu")
                 .offset(y: isCanisterSeated ? 0 : -canisterHeight * 0.4)
@@ -492,14 +492,16 @@ private struct FilmChamber: View {
                 .opacity(isCanisterSeated ? 1 : 0)
                 .id(style)
                 .transition(
-                    .asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .opacity
-                    )
+                    reduceMotion
+                        ? .opacity
+                        : .asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .opacity
+                        )
                 )
                 .offset(x: canisterLeading, y: canisterTop)
             }
-            .animation(.spring(duration: 0.45, bounce: 0.18), value: style)
+            .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.18), value: style)
         }
         .background(
             RadialGradient(
@@ -581,15 +583,19 @@ private struct CanisterButtonStyle: ButtonStyle {
     }
 }
 
+/// Lifts the canister a little under the pointer; with Reduce Motion it
+/// brightens in place instead.
 private struct HoverLift<Content: View>: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isPressed: Bool
     @ViewBuilder var content: Content
     @State private var isHovering = false
 
     var body: some View {
+        let isLifted = isHovering && !isPressed
         content
-            .offset(y: isHovering && !isPressed ? -3 : 0)
-            .brightness(isPressed ? -0.05 : 0)
+            .offset(y: isLifted && !reduceMotion ? -3 : 0)
+            .brightness(isPressed ? -0.05 : isLifted && reduceMotion ? 0.04 : 0)
             .animation(.easeOut(duration: 0.18), value: isHovering)
             .onHover { isHovering = $0 }
     }

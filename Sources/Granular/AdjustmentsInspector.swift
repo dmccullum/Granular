@@ -479,7 +479,7 @@ private struct EffectCard<Primary: View, Advanced: View>: View {
         .padding(.horizontal, 13)
         .padding(.top, 13)
         .padding(.bottom, enabled ? 13 - featherClearance : 13)
-        .background(.quaternary.opacity(0.34), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .cardBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .animation(effectAnimation, value: enabled)
     }
@@ -878,4 +878,37 @@ private struct CenterControlRow: View {
     private func percentage(_ value: Double) -> String {
         value.formatted(.percent.precision(.fractionLength(0)))
     }
+}
+
+/// The faint fill behind inspector cards and fields. Increase Contrast makes
+/// it firmer and gives it an edge.
+private struct CardBackground<S: InsettableShape>: ViewModifier {
+    @Environment(\.colorSchemeContrast) private var contrast
+    let shape: S
+    let opacity: Double
+    let isEdged: Bool
+
+    func body(content: Content) -> some View {
+        let isIncreased = contrast == .increased
+        content
+            .background(.quaternary.opacity(isIncreased ? min(1, opacity * 2.5) : opacity), in: shape)
+            .overlay {
+                if isIncreased, isEdged {
+                    shape.strokeBorder(Color.primary.opacity(0.45), lineWidth: 1)
+                }
+            }
+    }
+}
+
+extension View {
+    /// `isEdged` false leaves the edge to a tile that draws its own.
+    func cardBackground(in shape: some InsettableShape, opacity: Double = 0.34, isEdged: Bool = true) -> some View {
+        modifier(CardBackground(shape: shape, opacity: opacity, isEdged: isEdged))
+    }
+}
+
+/// The edge of a tile in a picker grid, firmer with Increase Contrast.
+func tileEdgeColor(isSelected: Bool, contrast: ColorSchemeContrast) -> Color {
+    if isSelected { return .accentColor }
+    return Color.primary.opacity(contrast == .increased ? 0.45 : 0.1)
 }

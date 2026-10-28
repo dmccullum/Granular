@@ -142,6 +142,7 @@ private struct PipelineDial: View {
     private static let diameter: CGFloat = 132
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The dial's turn in degrees, clockwise, unbounded so it spins freely.
     @State private var rotation = 0.0
     @State private var dragStart: (pointer: Double, rotation: Double)?
@@ -213,7 +214,8 @@ private struct PipelineDial: View {
             }
             .onEnded { _ in
                 dragStart = nil
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                // With Reduce Motion the dial clicks straight into its detent.
+                withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7)) {
                     rotation = (rotation / Self.step).rounded() * Self.step
                 }
             }

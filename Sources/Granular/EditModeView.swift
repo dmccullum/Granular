@@ -962,15 +962,29 @@ extension ZoomControls {
 
 /// Glass for controls floating over the canvas. On the dark canvas plain
 /// glass is nearly the canvas's own colour, so it is lifted a little there.
+/// With Reduce Transparency it is a solid control fill with an edge instead.
 private struct CanvasGlass<S: Shape>: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
     let shape: S
 
     func body(content: Content) -> some View {
-        content.glassEffect(
-            colorScheme == .dark ? .regular.tint(.white.opacity(0.08)) : .regular,
-            in: shape
-        )
+        if reduceTransparency {
+            content
+                .background(Color(nsColor: .controlBackgroundColor), in: shape)
+                .overlay {
+                    shape.stroke(
+                        contrast == .increased ? Color.primary.opacity(0.6) : Color(nsColor: .separatorColor),
+                        lineWidth: 1
+                    )
+                }
+        } else {
+            content.glassEffect(
+                colorScheme == .dark ? .regular.tint(.white.opacity(0.08)) : .regular,
+                in: shape
+            )
+        }
     }
 }
 
