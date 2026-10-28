@@ -70,11 +70,6 @@ struct AboutView: View {
                     .scaleEffect(1.35)
                     .padding(.vertical, 4)
 
-                Text("A little more film in every frame.")
-                    .font(.system(size: 12, weight: .medium))
-                    .engraved()
-                    .padding(.top, 8)
-
                 PipelineDial()
                     .padding(.top, 18)
 

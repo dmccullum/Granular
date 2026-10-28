@@ -17,7 +17,7 @@ Granular is a native macOS app for giving still images a more photographic, film
 
 <p align="center"><img src="docs/images/edit.png" alt="Granular Edit mode with live preview and adjustment panels" width="700"></p>
 
-Granular processes JPEG, HEIC, PNG, and TIFF images. The rendering order is fixed:
+Granular processes JPEG, HEIC, PNG, TIFF, WebP, and AVIF images. The rendering order is fixed:
 
 `film tone → spotlight/vignette → lens blur → diffusion → halation → landscape glow → grain`
 

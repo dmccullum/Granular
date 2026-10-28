@@ -45,7 +45,7 @@ private struct GeneralSettings: View {
 
         SettingsPane {
             Section("Startup") {
-                Toggle("Launch Granular at login", isOn: Binding(
+                Toggle("Open at Login", isOn: Binding(
                     get: { launchAtLogin },
                     set: { enabled in
                         launchAtLoginError = model.setLaunchAtLogin(enabled)
@@ -121,6 +121,9 @@ private struct OutputSettings: View {
 
                 Toggle("Remove GPS location metadata", isOn: $model.outputOptions.stripLocationMetadata)
                 Toggle("Preserve HDR", isOn: $model.outputOptions.preserveHDR)
+                Text("HDR photos saved as HEIC or JPEG keep their HDR, as a standard image plus a gain map. PNG and TIFF are saved as standard images.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Size and Color") {
@@ -273,7 +276,7 @@ private struct AutomationSettings: View {
                     }
                 }
 
-                Text("Files are processed with the currently selected recipe after they finish copying. Watching picks up again whenever Granular launches, so turn on Launch at login to keep it running.")
+                Text("Files are processed with the currently selected recipe after they finish copying. Watching picks up again whenever Granular launches, so turn on Open at Login in General to keep it running.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

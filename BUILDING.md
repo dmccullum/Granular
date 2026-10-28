@@ -82,7 +82,7 @@ To create a clean source archive for sharing or distribution:
 ./Scripts/package-source.sh
 ```
 
-The script creates `dist/Granular-1.4-source.zip`, excluding Git history,
+The script creates `dist/Granular-1.5-source.zip`, excluding Git history,
 previous builds, and local Finder metadata. It also verifies the ZIP after
 creating it.
 

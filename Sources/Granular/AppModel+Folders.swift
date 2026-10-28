@@ -107,7 +107,7 @@ extension AppModel {
             }
             return nil
         } catch {
-            return "Launch at Login: \(error.localizedDescription)"
+            return "Open at Login: \(error.localizedDescription)"
         }
     }
 
