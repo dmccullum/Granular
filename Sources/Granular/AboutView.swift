@@ -22,6 +22,8 @@ final class AboutWindowController: NSWindowController {
         panel.isReleasedWhenClosed = false
         panel.isRestorable = false
         panel.isExcludedFromWindowsMenu = true
+        // Panels hide when the app goes to the background by default; About stays put.
+        panel.hidesOnDeactivate = false
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
         super.init(window: panel)
