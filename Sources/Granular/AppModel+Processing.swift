@@ -10,29 +10,29 @@ import UniformTypeIdentifiers
 extension AppModel {
     /// Returns whether a folder was chosen and is now the output folder.
     @discardableResult
-    func chooseDropOutputFolder() -> Bool {
-        guard let url = chooseFolder(title: "Choose Instant Output Folder") else { return false }
+    func chooseDropOutputFolder(in window: NSWindow? = nil) async -> Bool {
+        guard let url = await chooseFolder(title: "Choose Instant Output Folder", in: window) else { return false }
         useDropOutputFolder(url)
         return dropOutputFolder == url
     }
 
     /// Choose Folder… in an alert about the output folder: once one is
     /// chosen, the images that couldn’t be processed are processed into it.
-    func chooseDropOutputFolder(thenProcessing urls: [URL]) {
-        guard chooseDropOutputFolder(), !urls.isEmpty else { return }
-        Task { await processInstantly(urls) }
+    func chooseDropOutputFolder(thenProcessing urls: [URL]) async {
+        guard await chooseDropOutputFolder(), !urls.isEmpty else { return }
+        await processInstantly(urls)
     }
 
-    func chooseWatchedInputFolder() {
-        guard let url = chooseFolder(title: "Choose Incoming Folder") else { return }
+    func chooseWatchedInputFolder(in window: NSWindow? = nil) async {
+        guard let url = await chooseFolder(title: "Choose Incoming Folder", in: window) else { return }
         let shouldResume = isWatching
         if setFolder(url, key: BookmarkKey.watchInput, assignment: { watchedInputFolder = $0 }), shouldResume {
             startWatching()
         }
     }
 
-    func chooseWatchedOutputFolder() {
-        guard let url = chooseFolder(title: "Choose Finished Folder") else { return }
+    func chooseWatchedOutputFolder(in window: NSWindow? = nil) async {
+        guard let url = await chooseFolder(title: "Choose Finished Folder", in: window) else { return }
         let shouldResume = isWatching
         if setFolder(url, key: BookmarkKey.watchOutput, assignment: { watchedOutputFolder = $0 }), shouldResume {
             startWatching()
@@ -66,7 +66,7 @@ extension AppModel {
             }
         } else {
             if dropOutputFolder == nil, destinationOverride == nil {
-                chooseDropOutputFolder()
+                await chooseDropOutputFolder()
             }
             guard let chosen = destinationOverride ?? dropOutputFolder else {
                 // The folder chooser was cancelled.

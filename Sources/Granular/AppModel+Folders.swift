@@ -111,14 +111,15 @@ extension AppModel {
         }
     }
 
-    func chooseFolder(title: String) -> URL? {
+    /// A folder, chosen in a sheet on `window` (the main window when nil).
+    func chooseFolder(title: String, in window: NSWindow? = nil) async -> URL? {
         let panel = NSOpenPanel()
         panel.title = title
         panel.prompt = "Choose"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        return panel.runModal() == .OK ? panel.url : nil
+        return await present(panel, in: window) == .OK ? panel.url : nil
     }
 
     @discardableResult

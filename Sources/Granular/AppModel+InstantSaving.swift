@@ -201,10 +201,12 @@ extension AppModel {
             : "\(count) images not saved yet. Use Save… to choose a folder.")
     }
 
-    /// A sheet on the main window when there is one, so the panel belongs to
-    /// what was just developed.
-    private func present(_ panel: NSSavePanel) async -> NSApplication.ModalResponse {
-        guard let window = observedWindow ?? NSApp.mainWindow, window.isVisible, !window.isMiniaturized else {
+    /// Shows a file panel as a sheet on `window`, or on the main window when
+    /// none is given, so the panel belongs to what asked for it. It runs on
+    /// its own only when that window is hidden or already has a sheet.
+    func present(_ panel: NSSavePanel, in window: NSWindow? = nil) async -> NSApplication.ModalResponse {
+        guard let window = window ?? observedWindow ?? NSApp.mainWindow,
+              window.isVisible, !window.isMiniaturized, window.attachedSheet == nil else {
             return panel.runModal()
         }
         return await withCheckedContinuation { continuation in

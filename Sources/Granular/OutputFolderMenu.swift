@@ -108,8 +108,8 @@ final class OutputFolderMenu: NSObject {
     }
 
     @objc private func choose() {
-        // Let the menu finish closing before the open panel runs modally.
-        Task { [model] in model.chooseDropOutputFolder() }
+        // Let the menu finish closing before the panel opens.
+        Task { [model] in await model.chooseDropOutputFolder() }
     }
 
     @objc private func showInFinder() {

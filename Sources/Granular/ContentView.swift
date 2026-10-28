@@ -133,7 +133,7 @@ struct ContentView: View {
                 if case .chooseDropOutputFolder(let urls) = alert.action {
                     Button("Choose Folder…") {
                         // After the alert is gone, so the panel isn't opened under it.
-                        Task { model.chooseDropOutputFolder(thenProcessing: urls) }
+                        Task { await model.chooseDropOutputFolder(thenProcessing: urls) }
                     }
                     Button("Cancel", role: .cancel) {}
                 } else {

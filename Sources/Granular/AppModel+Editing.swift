@@ -28,8 +28,10 @@ extension AppModel {
         panel.allowedContentTypes = Self.supportedImageTypes
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        guard panel.runModal() == .OK else { return }
-        Task { await processInstantly(panel.urls) }
+        Task {
+            guard await present(panel) == .OK else { return }
+            await processInstantly(panel.urls)
+        }
     }
 
     func chooseImageForEditing() {
@@ -38,8 +40,10 @@ extension AppModel {
         panel.allowedContentTypes = Self.supportedImageTypes
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        guard panel.runModal() == .OK else { return }
-        openForEditing(panel.urls)
+        Task {
+            guard await present(panel) == .OK else { return }
+            openForEditing(panel.urls)
+        }
     }
 
     /// Opens the first of `urls` that Granular can read, in place of the image
@@ -359,9 +363,10 @@ extension AppModel {
         panel.allowedContentTypes = [type]
         panel.canCreateDirectories = true
         panel.nameFieldStringValue = exportFileName(for: sourceURL)
-        guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
-
-        Task { await exportEditor(sourceURL: sourceURL, destinationURL: destinationURL) }
+        Task {
+            guard await present(panel) == .OK, let destinationURL = panel.url else { return }
+            await exportEditor(sourceURL: sourceURL, destinationURL: destinationURL)
+        }
     }
 
     func exportEditor(sourceURL: URL, destinationURL: URL) async {

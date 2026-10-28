@@ -250,11 +250,12 @@ private struct AutomationSettings: View {
     var body: some View {
         SettingsPane {
             Section("Watched Folders") {
+                // Settings is the key window while its button is clicked.
                 SettingsFolderRow(title: "Incoming", url: model.watchedInputFolder) {
-                    model.chooseWatchedInputFolder()
+                    Task { await model.chooseWatchedInputFolder(in: NSApp.keyWindow) }
                 }
                 SettingsFolderRow(title: "Finished", url: model.watchedOutputFolder) {
-                    model.chooseWatchedOutputFolder()
+                    Task { await model.chooseWatchedOutputFolder(in: NSApp.keyWindow) }
                 }
 
                 LabeledContent("Automation") {
@@ -349,8 +350,10 @@ private struct InstantFolderRow: View {
                         ?? "Choose where processed images are saved")
 
                 Button("Choose…") {
-                    model.chooseDropOutputFolder()
-                    recents = model.recentOutputFolders()
+                    Task {
+                        await model.chooseDropOutputFolder(in: NSApp.keyWindow)
+                        recents = model.recentOutputFolders()
+                    }
                 }
                 Button {
                     model.revealDropOutputFolder()

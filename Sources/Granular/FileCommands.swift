@@ -38,7 +38,7 @@ struct FileCommands: Commands {
             Divider()
 
             Button("Choose Instant Output Folder…") {
-                model.chooseDropOutputFolder()
+                Task { await model.chooseDropOutputFolder() }
             }
             if model.operationMode == .edit {
                 Button("Export…") {
