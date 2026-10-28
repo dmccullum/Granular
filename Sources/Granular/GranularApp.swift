@@ -145,12 +145,18 @@ struct GranularDesktopApp: App {
             EditCommands(model: model)
             RecipeCommands(model: model)
             InstantCommands(model: model)
-            HelpCommands()
+            // Granular has no help book, so its README on GitHub is the help.
+            FamilyHelpCommands(
+                help: URL(string: "https://github.com/dmccullum/Granular#readme")!,
+                keyboardShortcuts: .url(URL(string: "https://github.com/dmccullum/Granular#keyboard-shortcuts")!),
+                reportIssue: URL(string: "https://github.com/dmccullum/Granular/issues/new"),
+                acknowledgements: GranularLinks.acknowledgements
+            )
         }
 
         AboutScene(links: AboutLinks(
-            sourceCode: URL(string: "https://github.com/dmccullum/Granular"),
-            acknowledgements: Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: "txt")
+            sourceCode: GranularLinks.repository,
+            acknowledgements: GranularLinks.acknowledgements
         )) {
             PipelineDial()
         }
@@ -185,4 +191,11 @@ struct GranularDesktopApp: App {
         // type-select, and it gets out of the way as soon as a choice is made.
         .menuBarExtraStyle(.menu)
     }
+}
+
+/// Where About and Help point.
+enum GranularLinks {
+    static let repository = URL(string: "https://github.com/dmccullum/Granular")!
+    /// THIRD_PARTY_NOTICES.txt, copied into the bundle by Scripts/build-app.sh.
+    static let acknowledgements = Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: "txt")
 }

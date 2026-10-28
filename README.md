@@ -21,6 +21,33 @@ Granular processes JPEG, HEIC, PNG, TIFF, WebP, and AVIF images. The rendering o
 
 `film tone → spotlight/vignette → lens blur → diffusion → halation → landscape glow → grain`
 
+## Keyboard shortcuts
+
+| Keys | Action |
+|---|---|
+| ⌘O | Open Image… in Edit mode, Process Images… in Instant mode |
+| ⌘E | Export… the image open in Edit mode |
+| ⇧⌘R | Reveal Last Output in the Finder |
+| ⌘1 / ⌘2 | Switch to Instant / Edit mode |
+| ⌥⌘I | Show or hide the adjustments inspector |
+| \\ | Switch between the original and the processed image |
+| Space (held) | Show the original while the canvas has focus |
+| ⌘C | Copy the processed image while the canvas has focus |
+| ⌘+ or ⌘= / ⌘- | Zoom in / out |
+| ⌘0 / ⌘9 | Actual Size / Zoom to Fit |
+| ⌘Z / ⇧⌘Z | Undo / Redo |
+| ⇧⌘C / ⇧⌘V | Copy / Paste Settings |
+| ⌥⌘1 to ⌥⌘9 | Choose the recipe in that position in the Recipe menu |
+| ⌥⌘R | Open the Recipe Library |
+| ⌃⌘S | Show or hide the Recipe Library's sidebar |
+| ⌘Y or Space | Quick Look the frame selected on Instant mode's film strip |
+| ← / → | Select the previous / next frame on the film strip |
+| ⌘Delete | Move the selected frame's output to the Trash |
+| ⌘. | Cancel Processing |
+| ⌘? | Granular Help |
+
+In the inspector, double-click a slider or its name to put back the recipe's value, click the value to type one, and press ← or → to nudge a focused slider (⇧ for ten steps).
+
 ## Requirements
 
 - macOS 26 or later
