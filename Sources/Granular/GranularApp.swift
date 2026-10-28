@@ -37,12 +37,25 @@ final class GranularApplicationDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Frames developed under Ask Each Time live in a temporary folder until
-    /// they're saved, so quitting would quietly lose them.
+    /// A drop still being processed would stop partway, and frames developed
+    /// under Ask Each Time live in a temporary folder until they're saved, so
+    /// quitting would quietly lose them.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let model = ImageServiceProvider.shared.model, !model.unsavedJobIDs.isEmpty else {
-            return .terminateNow
+        guard let model = ImageServiceProvider.shared.model else { return .terminateNow }
+        if let batch = model.instantBatch {
+            let remaining = max(1, batch.progress.total - batch.progress.completed)
+            let alert = NSAlert()
+            alert.messageText = "Stop Processing and Quit?"
+            alert.informativeText = remaining == 1
+                ? "1 image hasn’t finished processing."
+                : "\(remaining) images haven’t finished processing."
+            alert.addButton(withTitle: "Cancel")
+            alert.addButton(withTitle: "Stop and Quit").hasDestructiveAction = true
+            guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }
+            model.cancelInstantProcessing()
         }
+        guard !model.unsavedJobIDs.isEmpty else { return .terminateNow }
+
         let count = model.unsavedJobIDs.count
         let alert = NSAlert()
         alert.messageText = count == 1
@@ -55,8 +68,12 @@ final class GranularApplicationDelegate: NSObject, NSApplicationDelegate {
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             NSApp.activate()
-            model.saveAllUnsaved()
-            return .terminateCancel
+            // Quits once they're saved; cancelling the panel keeps Granular open.
+            Task {
+                let isSaved = await model.saveAllUnsavedBeforeQuitting()
+                NSApp.reply(toApplicationShouldTerminate: isSaved)
+            }
+            return .terminateLater
         case .alertThirdButtonReturn:
             return .terminateNow
         default:

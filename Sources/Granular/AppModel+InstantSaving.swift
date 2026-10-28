@@ -99,6 +99,14 @@ extension AppModel {
         Task { await askWhereToSave(ids) }
     }
 
+    /// Saves every unsaved frame for Quit, returning whether all of them were.
+    func saveAllUnsavedBeforeQuitting() async -> Bool {
+        let ids = jobs.reversed().map(\.id).filter { unsavedJobIDs.contains($0) }
+        guard !isPresentingSavePanel else { return false }
+        await askWhereToSave(ids)
+        return unsavedJobIDs.isEmpty
+    }
+
     func saveUnsaved(_ id: UUID) {
         guard unsavedJobIDs.contains(id), !isPresentingSavePanel else { return }
         Task { await askWhereToSave([id]) }
