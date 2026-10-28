@@ -177,7 +177,7 @@ struct EditModeView: View {
     // rather than in an `.inspector`, which gives the panel its own toolbar.
     var body: some View {
         HStack(spacing: 0) {
-            EditorCanvas(zoomController: zoomController)
+            EditorCanvas(zoomController: zoomController, isFocused: isCanvasFocused)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
                 // Focusable so ⌘C copies the image once the canvas is clicked,
@@ -244,6 +244,7 @@ struct EditModeView: View {
 private struct EditorCanvas: View {
     @Environment(AppModel.self) private var model
     let zoomController: ViewerZoomController
+    let isFocused: Bool
 
     var body: some View {
         ZStack {
@@ -251,7 +252,8 @@ private struct EditorCanvas: View {
                 ZoomableImageCanvas(
                     image: image,
                     imagePixelSize: model.sourceInfo?.pixelSize ?? image.pixelDimensions,
-                    zoomController: zoomController
+                    zoomController: zoomController,
+                    isFocused: isFocused
                 )
                 .id(model.selectedSourceURL)
             } else {
@@ -398,6 +400,8 @@ private struct ZoomableImageCanvas: View {
     let image: NSImage
     let imagePixelSize: CGSize
     let zoomController: ViewerZoomController
+    /// Whether the canvas has keyboard focus, so Space held compares.
+    let isFocused: Bool
     @State private var dragStartOffset: CGSize?
 
     private struct Geometry: Equatable {
@@ -448,7 +452,7 @@ private struct ZoomableImageCanvas: View {
             .clipped()
             .contentShape(Rectangle())
             .background {
-                ViewerInputMonitor(model: model, zoomController: zoomController)
+                ViewerInputMonitor(model: model, zoomController: zoomController, isCanvasFocused: isFocused)
             }
             .simultaneousGesture(
                 SpatialTapGesture(count: 2)
@@ -546,6 +550,7 @@ private struct ViewerImage: View {
 private struct ViewerInputMonitor: NSViewRepresentable {
     let model: AppModel
     let zoomController: ViewerZoomController
+    let isCanvasFocused: Bool
 
     func makeNSView(context: Context) -> ViewerInputView {
         ViewerInputView()
@@ -554,12 +559,14 @@ private struct ViewerInputMonitor: NSViewRepresentable {
     func updateNSView(_ view: ViewerInputView, context: Context) {
         view.model = model
         view.zoomController = zoomController
+        view.isCanvasFocused = isCanvasFocused
     }
 }
 
 private final class ViewerInputView: NSView {
     var model: AppModel?
     var zoomController: ViewerZoomController?
+    var isCanvasFocused = false
     private var monitor: Any?
     private var resignObserver: (any NSObjectProtocol)?
     private var isComparingWithSpace = false
@@ -660,9 +667,9 @@ private final class ViewerInputView: NSView {
         }
     }
 
-    /// Space held while the canvas window is key compares against the original,
-    /// unless it is being typed or is meant for a focused control. Returns
-    /// whether the event was used up.
+    /// Space held while the canvas has keyboard focus compares against the
+    /// original. With a text field, button or toggle focused, Space is theirs.
+    /// Returns whether the event was used up.
     private func handleKey(_ event: NSEvent, window: NSWindow, model: AppModel) -> Bool {
         guard event.keyCode == Self.spaceKeyCode else { return false }
 
@@ -675,7 +682,7 @@ private final class ViewerInputView: NSView {
         if isComparingWithSpace { return true }
         let isPlainSpace = event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty
         let isTyping = window.firstResponder is NSText
-        guard isPlainSpace, !isTyping, window.isKeyWindow, !event.isARepeat,
+        guard isPlainSpace, isCanvasFocused, !isTyping, window.isKeyWindow, !event.isARepeat,
               model.operationMode == .edit,
               model.activeCenterTarget == nil,
               model.sourcePreview != nil,
