@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import Foundation
 
@@ -85,7 +86,7 @@ extension AppModel {
         }
         if output != nil, !NSApp.isActive {
             backgroundFinishedCount += 1
-            DockTile.setBadge(backgroundFinishedCount)
+            DockBadge.shared.showWhileInactive(count: backgroundFinishedCount)
         }
         updateDockProgress()
     }
@@ -148,14 +149,14 @@ extension AppModel {
         let total = batches.reduce(0) { $0 + $1.progress.total }
         let completed = batches.reduce(0) { $0 + $1.progress.completed }
         if total > 1 {
-            DockTile.showProgress(Double(completed) / Double(total))
+            DockProgress.shared.show(Double(completed) / Double(total))
         } else {
-            DockTile.hideProgress()
+            DockProgress.shared.hide()
         }
     }
 
-    /// The badge counts what finished while you were away, so it clears as
-    /// soon as Granular comes forward.
+    /// The badge counts what finished while you were away; DockBadge clears
+    /// it as soon as Granular comes forward, and the count starts again here.
     private func observeActivationIfNeeded() {
         guard activationObserver == nil else { return }
         activationObserver = NotificationCenter.default.addObserver(
@@ -166,7 +167,6 @@ extension AppModel {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.backgroundFinishedCount = 0
-                DockTile.setBadge(0)
                 // Images that finished while away are asked about now.
                 self.promptToSaveUnsaved()
             }
