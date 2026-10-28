@@ -671,6 +671,14 @@ private final class ViewerInputView: NSView {
     /// original. With a text field, button or toggle focused, Space is theirs.
     /// Returns whether the event was used up.
     private func handleKey(_ event: NSEvent, window: NSWindow, model: AppModel) -> Bool {
+        // ⌘=, the unshifted View ▸ Zoom In, which a menu item can't take as well as ⌘+.
+        if event.type == .keyDown,
+           event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command,
+           event.charactersIgnoringModifiers == "=" {
+            guard window.isKeyWindow, model.sourcePreview != nil, let zoomController else { return false }
+            zoomController.zoomIn()
+            return true
+        }
         guard event.keyCode == Self.spaceKeyCode else { return false }
 
         if event.type == .keyUp {

@@ -122,6 +122,8 @@ struct GranularDesktopApp: App {
             AboutCommands()
             MainWindowCommands()
             ViewerCommands(model: model)
+            // View ▸ Show/Hide Sidebar (⌃⌘S) for the Recipe Library's list.
+            SidebarCommands()
 
             FileCommands(model: model)
             EditCommands(model: model)

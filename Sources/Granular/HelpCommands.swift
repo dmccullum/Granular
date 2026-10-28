@@ -9,6 +9,7 @@ struct HelpCommands: Commands {
             Button("Granular Help") {
                 openURL(URL(string: "https://github.com/dmccullum/Granular#readme")!)
             }
+            .keyboardShortcut("?", modifiers: [.command])
         }
     }
 }

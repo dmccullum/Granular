@@ -68,6 +68,7 @@ struct ViewerCommands: Commands {
             .keyboardShortcut("9", modifiers: [.command])
             .disabled(!canZoom)
 
+            // ⌘= zooms in too, without Shift; the canvas's key monitor takes it.
             Button("Zoom In") {
                 zoomController?.zoomIn()
             }
