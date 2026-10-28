@@ -12,6 +12,10 @@ let package = Package(
         .library(name: "GranularCore", targets: ["GranularCore"]),
         .executable(name: "Granular", targets: ["Granular"])
     ],
+    dependencies: [
+        // The family's shared Mac components, checked out beside this repository.
+        .package(path: "../DMKit")
+    ],
     targets: [
         .target(
             name: "GranularCore",
@@ -30,7 +34,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "Granular",
-            dependencies: ["GranularCore"],
+            dependencies: [
+                "GranularCore",
+                .product(name: "DMKit", package: "DMKit", condition: .when(platforms: [.macOS]))
+            ],
             path: "Sources/Granular",
             swiftSettings: [
                 .defaultIsolation(MainActor.self)

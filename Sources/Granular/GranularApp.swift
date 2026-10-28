@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import SwiftUI
 
@@ -135,7 +136,6 @@ struct GranularDesktopApp: App {
         .defaultSize(model.initialWindowSize)
         .restorationBehavior(.disabled)
         .commands {
-            AboutCommands()
             MainWindowCommands()
             ViewerCommands(model: model)
             // View ▸ Show/Hide Sidebar (⌃⌘S) for the Recipe Library's list.
@@ -146,6 +146,13 @@ struct GranularDesktopApp: App {
             RecipeCommands(model: model)
             InstantCommands(model: model)
             HelpCommands()
+        }
+
+        AboutScene(links: AboutLinks(
+            sourceCode: URL(string: "https://github.com/dmccullum/Granular"),
+            acknowledgements: Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: "txt")
+        )) {
+            PipelineDial()
         }
 
         Window("Recipe Library", id: RecipeLibraryView.windowID) {
@@ -177,16 +184,5 @@ struct GranularDesktopApp: App {
         // A real menu, like every other menu bar item: keyboard navigation,
         // type-select, and it gets out of the way as soon as a choice is made.
         .menuBarExtraStyle(.menu)
-    }
-}
-
-private struct AboutCommands: Commands {
-    var body: some Commands {
-        CommandGroup(replacing: .appInfo) {
-            Button("About Granular") {
-                NSApp.activate()
-                AboutWindowController.shared.show()
-            }
-        }
     }
 }

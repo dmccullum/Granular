@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import Foundation
 import Observation
@@ -52,12 +53,13 @@ extension AppModel {
         }
     }
 
-    /// The Granular window, not Settings, a panel or a sheet, even when one of
-    /// those has focus.
+    /// The Granular window, not Settings, About, a panel or a sheet, even when
+    /// one of those has focus.
     var mainWindow: NSWindow? {
         func isMain(_ window: NSWindow) -> Bool {
             window.isVisible && window.canBecomeMain && !(window is NSPanel)
                 && window.identifier?.rawValue.localizedCaseInsensitiveContains("settings") != true
+                && window.identifier?.rawValue.hasPrefix(AboutCommands.defaultWindowID) != true
                 && !isRecipeLibraryWindow(window)
         }
         if let key = NSApplication.shared.keyWindow, isMain(key) { return key }
