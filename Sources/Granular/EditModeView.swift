@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import Observation
 import SwiftUI
@@ -264,6 +265,8 @@ private struct EditorCanvas: View {
 
             GlassEffectContainer {
                 ZStack {
+                    // Beneath the overlays, so their controls win any click.
+                    EditorStatus()
                     if model.previewImage != nil {
                         CanvasOverlays(zoomController: zoomController)
                     }
@@ -335,7 +338,6 @@ private struct CanvasOverlays: View {
                 }
             }
             Spacer()
-            EditorActivity()
             ZoomControls(zoomController: zoomController)
         }
         .padding(16)
@@ -1030,85 +1032,23 @@ private struct EditorEmptyState: View {
     }
 }
 
-/// An export or a full-size render in progress, or a brief notice, floating
-/// above the zoom controls.
-private struct EditorActivity: View {
+/// The status capsule while Edit mode is showing: what just happened, or an
+/// export or full-size render under way, floating over the canvas above the
+/// zoom bar. Instant mode shows the same statuses over its film.
+private struct EditorStatus: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Clears the zoom bar and its margin.
+    private static let zoomBarClearance: CGFloat = 48
 
     var body: some View {
-        Group {
-            if isShowing {
-                content
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .canvasGlass(in: .capsule)
-                    .transition(.opacity)
-            }
-        }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.editorNotice)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.transferRenderCount > 0)
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        Group {
-            if model.isExporting || model.transferRenderCount > 0 {
-                HStack(spacing: 6) {
-                    ProgressView()
-                        .controlSize(.mini)
-                    Text(model.isExporting ? "Exporting…" : "Preparing full-size image…")
-                }
-                .accessibilityElement(children: .combine)
-                .transition(.opacity)
-            } else if let notice = model.editorNotice {
-                HStack(spacing: 6) {
-                    noticeSymbol(for: notice)
-                        .accessibilityHidden(true)
-                    Text(notice.message)
-                        .truncationMode(.middle)
-                    if let action = notice.action {
-                        actionButton(action)
-                    }
-                }
-                .transition(.opacity)
-            }
-        }
-    }
-
-    private var isShowing: Bool {
-        model.isExporting || model.transferRenderCount > 0 || model.editorNotice != nil
-    }
-
-    @ViewBuilder
-    private func noticeSymbol(for notice: EditorNotice) -> some View {
-        if case .processInInstant = notice.action {
-            Image(systemName: "info.circle.fill")
-                .foregroundStyle(.secondary)
-        } else {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        }
-    }
-
-    @ViewBuilder
-    private func actionButton(_ action: EditorNotice.Action) -> some View {
-        switch action {
-        case .reveal(let url):
-            Button("Show in Finder") {
-                model.reveal(url)
-            }
-            .buttonStyle(.link)
-        case .processInInstant(let urls):
-            Button("Process All \(urls.count) in Instant") {
-                model.processInInstant(urls)
-            }
-            .buttonStyle(.link)
-            .help("Switch to Instant mode and process every image you dropped with this recipe")
-        }
+        Color.clear
+            .statusCapsule(Binding {
+                model.operationMode == .edit ? model.status : nil
+            } set: {
+                model.status = $0
+            })
+            .padding(.bottom, model.sourcePreview != nil ? Self.zoomBarClearance : 0)
     }
 }
 

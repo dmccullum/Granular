@@ -64,7 +64,7 @@ extension AppModel {
         return task
     }
 
-    /// The rendered file for `key`, with progress in the status bar while it’s waited on.
+    /// The rendered file for `key`, with progress in the status capsule while it’s waited on.
     func renderProcessedImageForTransfer(_ key: TransferRenderKey) async throws -> URL {
         transferRenderCount += 1
         defer { transferRenderCount -= 1 }
@@ -109,7 +109,7 @@ extension AppModel {
                 item.setString(file.absoluteString, forType: .fileURL)
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.writeObjects([item])
-                showEditorNotice("Copied “\(file.lastPathComponent)”")
+                showStatus("Copied “\(file.lastPathComponent)”")
             } catch {
                 editorAlert = EditorAlert(
                     title: "The image couldn’t be copied.",

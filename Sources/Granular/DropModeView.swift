@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import ImageIO
 import SwiftUI
@@ -87,6 +88,12 @@ struct DropModeView: View {
             }
             .padding(.horizontal, 10)
             .padding(.top, 2)
+            // Statuses said while Instant mode is showing, over the foot of the film.
+            .statusCapsule(Binding {
+                model.operationMode == .drop ? model.status : nil
+            } set: {
+                model.status = $0
+            })
 
             FilmBackStatusBar()
         }
@@ -1492,14 +1499,9 @@ private struct FilmBackStatusBar: View {
 
             Spacer(minLength: 20)
 
-            // Progress shows on the film itself; only a failure or a notice,
-            // such as files skipped from a drop, needs words.
-            if let notice = model.editorNotice {
-                Label(notice.message, systemImage: "info.circle")
-                    .lineLimit(1)
-                    .help(notice.message)
-                    .transition(.opacity)
-            } else if case .failed(let message) = model.jobs.first?.state {
+            // Progress shows on the film itself, and statuses in the capsule
+            // over it; only a failure stays here in words.
+            if case .failed(let message) = model.jobs.first?.state {
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .lineLimit(1)
@@ -1551,7 +1553,6 @@ private struct FilmBackStatusBar: View {
             .accessibilityLabel("\(model.completedJobCount) images processed")
         }
         .animation(.easeOut(duration: 0.2), value: (model.displayedBatch?.progress.total ?? 0) > 1)
-        .animation(.easeOut(duration: 0.2), value: model.editorNotice)
         .font(.caption)
         .padding(.horizontal, 16)
         .frame(height: 42)

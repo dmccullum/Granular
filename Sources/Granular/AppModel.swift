@@ -124,7 +124,9 @@ final class AppModel {
     var stockThumbnails: [FilmStockID: NSImage] = [:]
     var selectedSourceURL: URL?
     var isRenderingPreview = false
-    var isExporting = false
+    var isExporting = false {
+        didSet { updateActivityStatus() }
+    }
     var jobs: [ProcessingJob] = []
     var watchStatusMessage = "Choose Incoming and Finished folders, then start watching."
     var watchErrorMessage: String?
@@ -192,10 +194,13 @@ final class AppModel {
     /// Newest first, for File ▸ Open Recent and the Dock menu.
     let recentImages = RecentImageStore.makeRecentItems()
     var editorAlert: EditorAlert?
-    var editorNotice: EditorNotice?
-    @ObservationIgnored var editorNoticeTask: Task<Void, Never>?
+    /// What the capsule over the canvas or the film says: something that just
+    /// happened, or an export or full-size render under way.
+    var status: StatusMessage?
     /// Full-size renders for sharing, dragging or copying that something is waiting on.
-    var transferRenderCount = 0
+    var transferRenderCount = 0 {
+        didSet { updateActivityStatus() }
+    }
     /// The last full-size render, reused while the image and its settings stay the same.
     @ObservationIgnored var transferRender: TransferRender?
     /// Keeps the share picker alive while it’s open.

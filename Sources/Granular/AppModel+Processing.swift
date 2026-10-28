@@ -70,7 +70,7 @@ extension AppModel {
             }
             guard let chosen = destinationOverride ?? dropOutputFolder else {
                 // The folder chooser was cancelled.
-                showEditorNotice(supported.count == 1
+                showStatus(supported.count == 1
                     ? "Not processed: no output folder chosen"
                     : "\(supported.count) images not processed: no output folder chosen")
                 return []
@@ -154,7 +154,7 @@ extension AppModel {
         // Say so when part of a drop wasn’t something Granular can read.
         let skipped = urls.count - supported.count
         if skipped > 0, destinationOverride == nil, !isBatchCancelled(batchID) {
-            showEditorNotice(skipped == 1
+            showStatus(skipped == 1
                 ? "Skipped 1 file that isn’t a supported image"
                 : "Skipped \(skipped) files that aren’t supported images")
         }

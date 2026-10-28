@@ -197,7 +197,7 @@ extension AppModel {
 
     /// Leaves the frames on the strip, marked, for the person to save later.
     private func noteUnsaved(count: Int) {
-        showEditorNotice(count == 1
+        showStatus(count == 1
             ? "Not saved yet. Right-click the frame to save it."
             : "\(count) images not saved yet. Use Save… to choose a folder.")
     }

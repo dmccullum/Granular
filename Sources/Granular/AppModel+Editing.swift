@@ -77,9 +77,11 @@ extension AppModel {
 
         let images = urls.filter(Self.isSupportedImage)
         if images.count > 1 {
-            showEditorNotice(
+            showStatus(
                 "Opened “\(opened.lastPathComponent)”. Edit works on one image at a time.",
-                action: .processInInstant(images)
+                action: StatusMessage.Action("Process All \(images.count) in Instant") { [weak self] in
+                    self?.processInInstant(images)
+                }
             )
         }
     }
@@ -95,7 +97,7 @@ extension AppModel {
         sourceInfo = EditorSourceInfo(url: url)
         processedPreview = nil
         showOriginal = false
-        editorNotice = nil
+        clearStatusMessage()
         // Switching modes starts the window's resize.
         operationMode = .edit
         schedulePreview()
@@ -147,7 +149,7 @@ extension AppModel {
 
     /// Sends images that arrived in Edit mode over to Instant mode to be processed.
     func processInInstant(_ urls: [URL]) {
-        editorNotice = nil
+        clearStatusMessage()
         operationMode = .drop
         Task { await processInstantly(urls) }
     }
@@ -364,7 +366,10 @@ extension AppModel {
                 options: outputOptions
             )
             updateJob(job.id, state: .finished(output))
-            showEditorNotice("Exported “\(output.lastPathComponent)”", action: .reveal(output))
+            showStatus(
+                "Exported “\(output.lastPathComponent)”",
+                action: StatusMessage.Action("Show in Finder") { [weak self] in self?.reveal(output) }
+            )
         } catch {
             updateJob(job.id, state: .failed(error.localizedDescription))
             editorAlert = .exportFailed(sourceURL, reason: error.localizedDescription)
@@ -392,14 +397,38 @@ extension AppModel {
         }
     }
 
-    /// A short confirmation in the status bar that clears itself.
-    func showEditorNotice(_ message: String, action: EditorNotice.Action? = nil) {
-        editorNoticeTask?.cancel()
-        editorNotice = EditorNotice(message: message, action: action)
-        editorNoticeTask = Task {
-            try? await Task.sleep(for: .seconds(6))
-            guard !Task.isCancelled else { return }
-            editorNotice = nil
+    // MARK: Status
+
+    /// Says what just happened in the status capsule (F12). A plain message
+    /// leaves on its own after at least 4 seconds, longer while the pointer
+    /// is on it; one with a button stays until the button is used or another
+    /// status replaces it. Failures are alerts, never statuses.
+    func showStatus(_ message: String, action: StatusMessage.Action? = nil) {
+        status = StatusMessage(message, action: action)
+    }
+
+    /// Takes away a message, leaving an export or render in progress showing.
+    func clearStatusMessage() {
+        if status?.kind == .message {
+            status = nil
+        }
+    }
+
+    /// Shows an export or a full-size render under way, and takes it away
+    /// when it ends, unless a message has replaced it by then.
+    func updateActivityStatus() {
+        let activity: String? = if isExporting {
+            "Exporting…"
+        } else if transferRenderCount > 0 {
+            "Preparing full-size image…"
+        } else {
+            nil
+        }
+        if let activity {
+            guard status?.kind != .progress || status?.text != activity else { return }
+            status = .progress(activity)
+        } else if status?.kind == .progress {
+            status = nil
         }
     }
 
@@ -503,18 +532,6 @@ struct EditorAlert: Identifiable {
         let more = urls.count > 5 ? ["and \(urls.count - 5) more"] : []
         return (names + more).joined(separator: "\n")
     }
-}
-
-struct EditorNotice: Equatable {
-    enum Action: Equatable {
-        /// Show in Finder.
-        case reveal(URL)
-        /// Process images that arrived in Edit mode with Instant mode instead.
-        case processInInstant([URL])
-    }
-
-    let message: String
-    let action: Action?
 }
 
 /// What the status bar says about the open image, read from its header.
