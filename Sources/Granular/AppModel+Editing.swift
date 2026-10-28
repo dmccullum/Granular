@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import Foundation
 import ImageIO
@@ -29,7 +30,7 @@ extension AppModel {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         Task {
-            guard await present(panel) == .OK else { return }
+            guard await panel.present(in: panelWindow()) == .OK else { return }
             await processInstantly(panel.urls)
         }
     }
@@ -41,7 +42,7 @@ extension AppModel {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         Task {
-            guard await present(panel) == .OK else { return }
+            guard await panel.present(in: panelWindow()) == .OK else { return }
             openForEditing(panel.urls)
         }
     }
@@ -364,7 +365,7 @@ extension AppModel {
         panel.canCreateDirectories = true
         panel.nameFieldStringValue = exportFileName(for: sourceURL)
         Task {
-            guard await present(panel) == .OK, let destinationURL = panel.url else { return }
+            guard await panel.present(in: panelWindow()) == .OK, let destinationURL = panel.url else { return }
             await exportEditor(sourceURL: sourceURL, destinationURL: destinationURL)
         }
     }

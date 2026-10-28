@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import Foundation
 import UniformTypeIdentifiers
@@ -142,7 +143,7 @@ extension AppModel {
             if let folder = dropOutputFolder, Self.isExistingDirectory(folder) {
                 panel.directoryURL = folder
             }
-            guard await present(panel) == .OK, let destination = panel.url else {
+            guard await panel.present(in: panelWindow()) == .OK, let destination = panel.url else {
                 noteUnsaved(count: 1)
                 return
             }
@@ -169,7 +170,7 @@ extension AppModel {
         if let folder = dropOutputFolder, Self.isExistingDirectory(folder) {
             panel.directoryURL = folder
         }
-        guard await present(panel) == .OK, let folder = panel.url else {
+        guard await panel.present(in: panelWindow()) == .OK, let folder = panel.url else {
             noteUnsaved(count: frames.count)
             return
         }
@@ -201,17 +202,14 @@ extension AppModel {
             : "\(count) images not saved yet. Use Save… to choose a folder.")
     }
 
-    /// Shows a file panel as a sheet on `window`, or on the main window when
-    /// none is given, so the panel belongs to what asked for it. It runs on
-    /// its own only when that window is hidden or already has a sheet.
-    func present(_ panel: NSSavePanel, in window: NSWindow? = nil) async -> NSApplication.ModalResponse {
+    /// The window a file panel attaches to as a sheet (with DMKit's
+    /// `NSSavePanel.present(in:)`): `window` when given, else the main window,
+    /// so the panel belongs to what asked for it. Nil, so the panel runs on its
+    /// own, when that window is hidden or in the Dock.
+    func panelWindow(_ window: NSWindow? = nil) -> NSWindow? {
         guard let window = window ?? observedWindow ?? NSApp.mainWindow,
-              window.isVisible, !window.isMiniaturized, window.attachedSheet == nil else {
-            return panel.runModal()
-        }
-        return await withCheckedContinuation { continuation in
-            panel.beginSheetModal(for: window) { continuation.resume(returning: $0) }
-        }
+              window.isVisible, !window.isMiniaturized else { return nil }
+        return window
     }
 
     private func move(_ file: URL, to destination: URL, replacing: Bool) throws {

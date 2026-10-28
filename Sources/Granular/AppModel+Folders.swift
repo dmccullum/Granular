@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import Foundation
 import Observation
@@ -119,7 +120,7 @@ extension AppModel {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        return await present(panel, in: window) == .OK ? panel.url : nil
+        return await panel.present(in: panelWindow(window)) == .OK ? panel.url : nil
     }
 
     @discardableResult

@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import SwiftUI
 import UniformTypeIdentifiers
@@ -85,9 +86,9 @@ extension AppModel {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         let window = activeRecipeWindow
-        present(panel, in: window) { [weak self] response in
-            guard response == .OK, let self else { return }
-            self.importRecipes(from: panel.urls, in: window)
+        Task {
+            guard await panel.present(in: sheetWindow(for: window)) == .OK else { return }
+            importRecipes(from: panel.urls, in: window)
             showLibrary()
         }
     }
@@ -100,12 +101,13 @@ extension AppModel {
         panel.nameFieldStringValue = RecipeFile.fileName(for: recipe)
         panel.allowedContentTypes = [.granularRecipe]
         panel.canCreateDirectories = true
-        present(panel, in: activeRecipeWindow) { [weak self] response in
-            guard response == .OK, let url = panel.url else { return }
+        let window = activeRecipeWindow
+        Task {
+            guard await panel.present(in: sheetWindow(for: window)) == .OK, let url = panel.url else { return }
             do {
                 try RecipeFile(recipe: recipe).encoded().write(to: url, options: .atomic)
             } catch {
-                self?.recipeLibraryAlert = RecipeLibraryAlert(
+                recipeLibraryAlert = RecipeLibraryAlert(
                     title: "“\(recipe.name)” couldn’t be exported.",
                     message: error.localizedDescription
                 )
@@ -137,17 +139,9 @@ extension AppModel {
         return url.resolvingSymlinksInPath().path.hasPrefix(transfers)
     }
 
-    /// Shows a file panel as a sheet on the window the request came from.
-    private func present(
-        _ panel: NSSavePanel,
-        in window: RecipeWindow,
-        completion: @escaping (NSApplication.ModalResponse) -> Void
-    ) {
+    /// The window the request came from, for a file panel to attach to as a sheet.
+    private func sheetWindow(for window: RecipeWindow) -> NSWindow? {
         let host = window == .library ? recipeLibraryWindow : mainWindow
-        if let host, host.isVisible, host.attachedSheet == nil {
-            panel.beginSheetModal(for: host, completionHandler: completion)
-        } else {
-            panel.begin(completionHandler: completion)
-        }
+        return host?.isVisible == true ? host : nil
     }
 }
