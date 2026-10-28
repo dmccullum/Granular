@@ -4,6 +4,8 @@ import SwiftUI
 
 struct AdjustmentsInspector: View {
     @Environment(AppModel.self) private var model
+    /// One event monitor for every slider’s double-click reset.
+    @State private var sliderResets = SliderResetMonitor()
 
     var body: some View {
         @Bindable var model = model
@@ -45,6 +47,7 @@ struct AdjustmentsInspector: View {
             }
             .padding(16)
         }
+        .environment(\.sliderResetMonitor, sliderResets)
         .onChange(of: model.recipe) { _, _ in
             model.recipeDidChange()
         }
@@ -737,43 +740,96 @@ private struct ParameterSlider: View {
 
 /// Double-clicking a slider resets it, as in other Mac creative apps. The
 /// slider is an AppKit control that keeps its clicks to itself, so this
-/// watches for double-clicks landing on it rather than adding a gesture.
+/// marks where the slider is, and the inspector’s `SliderResetMonitor`
+/// watches for double-clicks landing there rather than adding a gesture.
 private struct SliderDoubleClickReset: NSViewRepresentable {
+    @Environment(\.sliderResetMonitor) private var monitor
     let perform: () -> Void
 
     func makeNSView(context: Context) -> WatchingView {
         let view = WatchingView()
         view.perform = perform
+        view.monitor = monitor
         return view
     }
 
     func updateNSView(_ view: WatchingView, context: Context) {
         view.perform = perform
+        view.monitor = monitor
     }
 
     final class WatchingView: NSView {
         var perform: () -> Void = {}
-        private var monitor: Any?
+        var monitor: SliderResetMonitor? {
+            didSet {
+                guard monitor !== oldValue else { return }
+                oldValue?.remove(self)
+                if window != nil { monitor?.add(self) }
+            }
+        }
 
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            if let monitor {
-                NSEvent.removeMonitor(monitor)
-                self.monitor = nil
-            }
-            guard window != nil else { return }
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-                guard let self, event.clickCount == 2, event.window === self.window else { return event }
-                let point = self.convert(event.locationInWindow, from: nil)
-                if self.bounds.contains(point) {
-                    // After the slider has taken the click, so the reset wins.
-                    DispatchQueue.main.async { self.perform() }
-                }
-                return event
+            if window != nil {
+                monitor?.add(self)
+            } else {
+                monitor?.remove(self)
             }
         }
+    }
+}
+
+/// The inspector’s one local event monitor for double-clicks on its sliders.
+/// It runs while any slider is in a window, and resets whichever slider the
+/// double-click lands on.
+final class SliderResetMonitor {
+    private var views: [ObjectIdentifier: WeakView] = [:]
+    private var monitor: Any?
+
+    private struct WeakView {
+        weak var view: SliderDoubleClickReset.WatchingView?
+    }
+
+    fileprivate func add(_ view: SliderDoubleClickReset.WatchingView) {
+        views[ObjectIdentifier(view)] = WeakView(view: view)
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard event.clickCount == 2 else { return event }
+            MainActor.assumeIsolated { self?.resetSlider(under: event) }
+            return event
+        }
+    }
+
+    fileprivate func remove(_ view: SliderDoubleClickReset.WatchingView) {
+        views[ObjectIdentifier(view)] = nil
+        views = views.filter { $0.value.view != nil }
+        if views.isEmpty, let monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
+        }
+    }
+
+    private func resetSlider(under event: NSEvent) {
+        for case let view? in views.values.map(\.view) where event.window === view.window {
+            let point = view.convert(event.locationInWindow, from: nil)
+            if view.bounds.contains(point) {
+                // After the slider has taken the click, so the reset wins.
+                DispatchQueue.main.async { view.perform() }
+            }
+        }
+    }
+}
+
+private struct SliderResetMonitorKey: EnvironmentKey {
+    static let defaultValue: SliderResetMonitor? = nil
+}
+
+private extension EnvironmentValues {
+    var sliderResetMonitor: SliderResetMonitor? {
+        get { self[SliderResetMonitorKey.self] }
+        set { self[SliderResetMonitorKey.self] = newValue }
     }
 }
 
