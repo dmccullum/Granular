@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import SwiftUI
 
 /// File menu: opening, exporting, sharing, saving and revealing images.
@@ -16,17 +17,8 @@ struct FileCommands: Commands {
             .keyboardShortcut("o")
 
             // Recent images always open in Edit mode, whichever mode is showing.
-            Menu("Open Recent") {
-                ForEach(model.recentImages) { recent in
-                    Button(RecentImageStore.menuTitle(for: recent, among: model.recentImages)) {
-                        model.openRecentImage(recent)
-                    }
-                }
-                Divider()
-                Button("Clear Menu") {
-                    model.clearRecentImages()
-                }
-                .disabled(model.recentImages.isEmpty)
+            OpenRecentMenu(recents: model.recentImages) { url in
+                model.openForEditing([url])
             }
 
             if model.operationMode == .edit, model.selectedSourceURL != nil {

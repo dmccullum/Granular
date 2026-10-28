@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import Foundation
 import Observation
@@ -189,7 +190,7 @@ final class AppModel {
     /// The open image’s upright size, format and file size, read from its header.
     var sourceInfo: EditorSourceInfo?
     /// Newest first, for File ▸ Open Recent and the Dock menu.
-    var recentImages: [RecentImage] = RecentImageStore.load()
+    let recentImages = RecentImageStore.makeRecentItems()
     var editorAlert: EditorAlert?
     var editorNotice: EditorNotice?
     @ObservationIgnored var editorNoticeTask: Task<Void, Never>?

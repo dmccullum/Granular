@@ -87,19 +87,27 @@ final class GranularApplicationDelegate: NSObject, NSApplicationDelegate {
 
     /// Recent images, for picking up where you left off from the Dock.
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
-        let recents = RecentImageStore.load()
-        guard !recents.isEmpty else { return nil }
+        // The list is pruned when Granular becomes active; the Dock can ask
+        // while it's in the background, so look for each file here too.
+        let urls = (ImageServiceProvider.shared.model?.recentImages.items ?? []).compactMap { item -> URL? in
+            let url = item.resolve().url
+            let isAccessing = url.startAccessingSecurityScopedResource()
+            defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
+            return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        }
+        guard !urls.isEmpty else { return nil }
 
         let menu = NSMenu()
-        for recent in recents.prefix(8) {
+        let shown = Array(urls.prefix(8))
+        for (url, title) in zip(shown, RecentItems.menuTitles(for: shown)) {
             let item = NSMenuItem(
-                title: RecentImageStore.menuTitle(for: recent, among: recents),
+                title: title,
                 action: #selector(openRecentImage(_:)),
                 keyEquivalent: ""
             )
             item.target = self
-            item.representedObject = recent.url
-            let icon = NSWorkspace.shared.icon(forFile: recent.url.path)
+            item.representedObject = url
+            let icon = NSWorkspace.shared.icon(forFile: url.path)
             icon.size = NSSize(width: 16, height: 16)
             item.image = icon
             menu.addItem(item)

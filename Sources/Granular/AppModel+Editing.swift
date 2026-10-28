@@ -160,31 +160,9 @@ extension AppModel {
 
     // MARK: Recent images
 
+    /// Puts `url` at the top of File ▸ Open Recent and the Dock menu.
     func noteRecentImage(_ url: URL) {
-        NSDocumentController.shared.noteNewRecentDocumentURL(url)
-        guard let bookmark = try? url.bookmarkData(options: .withSecurityScope) else { return }
-        recentImages = OpenImages.recents(
-            recentImages,
-            adding: RecentImage(url: url, bookmark: bookmark),
-            limit: RecentImageStore.limit
-        ) { $0.url.standardizedFileURL == $1.url.standardizedFileURL }
-        RecentImageStore.save(recentImages)
-    }
-
-    func openRecentImage(_ recent: RecentImage) {
-        guard FileManager.default.fileExists(atPath: recent.url.path) else {
-            editorAlert = .missing(recent.url)
-            recentImages.removeAll { $0 == recent }
-            RecentImageStore.save(recentImages)
-            return
-        }
-        openForEditing([recent.url])
-    }
-
-    func clearRecentImages() {
-        recentImages = []
-        RecentImageStore.save([])
-        NSDocumentController.shared.clearRecentDocuments(nil)
+        recentImages.note(url)
     }
 
     // MARK: Previews
@@ -444,44 +422,32 @@ extension AppModel {
     }
 }
 
-/// An image opened recently, with the bookmark that lets the sandbox reopen it.
-struct RecentImage: Identifiable, Equatable {
-    let url: URL
-    let bookmark: Data
-
-    var id: URL { url }
-}
-
-/// Recent images, kept as security-scoped bookmarks so they can be reopened
-/// from the menu or the Dock after a relaunch.
+/// Recent images, kept by DMKit's `RecentItems` as security-scoped bookmarks
+/// so they can be reopened from the menu or the Dock after a relaunch.
 enum RecentImageStore {
-    static let limit = 10
-    private static let key = "editor.recentImages"
+    static let key = "editor.recentImages"
 
-    static func load() -> [RecentImage] {
-        let bookmarks = UserDefaults.standard.array(forKey: key) as? [Data] ?? []
-        return bookmarks.compactMap { bookmark in
+    static func makeRecentItems(defaults: UserDefaults = .standard) -> RecentItems {
+        migrateBookmarkList(in: defaults)
+        return RecentItems(key: key, limit: 10, defaults: defaults)
+    }
+
+    /// Granular used to keep a plain array of bookmarks under the same key.
+    /// `RecentItems` keeps each file's URL beside its bookmark, so the list
+    /// is rewritten that way once, newest first as it was.
+    static func migrateBookmarkList(in defaults: UserDefaults) {
+        guard let bookmarks = defaults.array(forKey: key) as? [Data] else { return }
+        let items = bookmarks.compactMap { bookmark -> RecentItem? in
             var isStale = false
             guard let url = try? URL(
                 resolvingBookmarkData: bookmark,
                 options: [.withSecurityScope, .withoutUI],
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
-            ), FileManager.default.fileExists(atPath: url.path) else { return nil }
-            return RecentImage(url: url, bookmark: bookmark)
+            ) else { return nil }
+            return RecentItem(url: url, bookmark: bookmark)
         }
-    }
-
-    static func save(_ recents: [RecentImage]) {
-        UserDefaults.standard.set(recents.map(\.bookmark), forKey: key)
-    }
-
-    /// Menu titles, with the folder added where two recent files share a name.
-    static func menuTitle(for recent: RecentImage, among recents: [RecentImage]) -> String {
-        let name = recent.url.lastPathComponent
-        let isAmbiguous = recents.contains { $0 != recent && $0.url.lastPathComponent == name }
-        guard isAmbiguous else { return name }
-        return "\(name) — \(recent.url.deletingLastPathComponent().lastPathComponent)"
+        defaults.set(try? JSONEncoder().encode(items), forKey: key)
     }
 }
 
@@ -509,13 +475,6 @@ struct EditorAlert: Identifiable {
         return EditorAlert(
             title: "Granular can’t open these \(urls.count) files.",
             message: "\(listing(urls))\n\n\(formats)"
-        )
-    }
-
-    static func missing(_ url: URL) -> EditorAlert {
-        EditorAlert(
-            title: "“\(url.lastPathComponent)” can’t be found.",
-            message: "It may have been moved, renamed, or deleted."
         )
     }
 
