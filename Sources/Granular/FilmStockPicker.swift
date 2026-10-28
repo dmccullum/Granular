@@ -25,7 +25,6 @@ struct FilmStockPickerButton: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
-            .font(.caption)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, minHeight: 22)
             .cardBackground(in: RoundedRectangle(cornerRadius: 6), opacity: 1)

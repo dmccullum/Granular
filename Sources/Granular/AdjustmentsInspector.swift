@@ -1,11 +1,12 @@
 import AppKit
+import DMKit
 import GranularCore
 import SwiftUI
 
+/// The adjustments beside the canvas: one DMKit inspector card per effect,
+/// in the order the renderer applies them.
 struct AdjustmentsInspector: View {
     @Environment(AppModel.self) private var model
-    /// One event monitor for every slider’s double-click reset.
-    @State private var sliderResets = SliderResetMonitor()
 
     var body: some View {
         @Bindable var model = model
@@ -13,7 +14,7 @@ struct AdjustmentsInspector: View {
         let defaults = model.currentRecipe
 
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: DMLayout.inspectorSpacing) {
                 HStack(spacing: 8) {
                     // The title keeps its line; a long recipe name gives way instead.
                     Text("Adjustments")
@@ -45,9 +46,8 @@ struct AdjustmentsInspector: View {
                     randomize: model.randomizeGrain
                 )
             }
-            .padding(16)
+            .padding(DMLayout.inspectorPadding)
         }
-        .environment(\.sliderResetMonitor, sliderResets)
         .onChange(of: model.recipe) { _, _ in
             model.recipeDidChange()
         }
@@ -63,15 +63,11 @@ private struct FilmToneCard: View {
     var body: some View {
         EffectCard(
             title: "Film Tone",
-            symbol: "film",
-            tint: .yellow,
             enabled: $settings.isEnabled,
             reset: reset,
             showsAdvanced: false
         ) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Film Stock")
-                    .font(.caption)
+            StackedControl("Film Stock") {
                 FilmStockPickerButton(stock: Binding {
                     settings.stock
                 } set: { stock in
@@ -84,7 +80,6 @@ private struct FilmToneCard: View {
                     }
                 })
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             ParameterSlider(
                 "Stock Amount",
                 value: $settings.stockAmount,
@@ -117,8 +112,6 @@ private struct LightShapingCard: View {
     var body: some View {
         EffectCard(
             title: "Vignette",
-            symbol: "circle.dotted.circle",
-            tint: .orange,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -143,7 +136,6 @@ private struct LightShapingCard: View {
             CenterControlRow(
                 title: "Center",
                 target: .vignette,
-                tint: .orange,
                 x: $settings.centerX,
                 y: $settings.centerY
             )
@@ -159,8 +151,6 @@ private struct LensBlurCard: View {
     var body: some View {
         EffectCard(
             title: "Lens Blur",
-            symbol: "drop.halffull",
-            tint: .cyan,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -182,7 +172,6 @@ private struct LensBlurCard: View {
             CenterControlRow(
                 title: "Focus",
                 target: .lensBlur,
-                tint: .cyan,
                 x: $settings.focusX,
                 y: $settings.focusY
             )
@@ -198,8 +187,6 @@ private struct DiffusionCard: View {
     var body: some View {
         EffectCard(
             title: "Diffusion",
-            symbol: "circle.dotted",
-            tint: .indigo,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -233,8 +220,6 @@ private struct HalationCard: View {
     var body: some View {
         EffectCard(
             title: "Halation",
-            symbol: "sun.horizon",
-            tint: .red,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -279,9 +264,6 @@ private struct LandscapeGlowCard: View {
     var body: some View {
         EffectCard(
             title: "Landscape Glow",
-            symbol: "mountain.2",
-            symbolScale: 0.8,
-            tint: .purple,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -314,9 +296,6 @@ private struct GrainCard: View {
     var body: some View {
         EffectCard(
             title: "Film Grain",
-            symbol: "aqi.medium",
-            symbolScale: 0.85,
-            tint: .mint,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -361,15 +340,12 @@ private struct GrainCard: View {
     }
 }
 
+/// One effect: its name, Reset and on/off switch in the header, its main
+/// sliders, and the rest under More. Switched off, it folds to its header.
 private struct EffectCard<Primary: View, Advanced: View>: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let title: String
-    let symbol: String
-    /// Shrinks a symbol that's drawn wider or denser than the rest.
-    var symbolScale: CGFloat = 1
-    let tint: Color
     @Binding var enabled: Bool
     let reset: () -> Void
     var showsAdvanced = true
@@ -377,198 +353,88 @@ private struct EffectCard<Primary: View, Advanced: View>: View {
     @ViewBuilder let advanced: () -> Advanced
 
     @State private var isExpanded = false
-    @State private var baseHeight: CGFloat = 0
-    @State private var advancedHeight: CGFloat = 0
-    @State private var baseMeasurementID = UUID()
-    @State private var advancedMeasurementID = UUID()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 9) {
-                Image(systemName: symbol)
-                    .foregroundStyle(tint)
-                    .scaleEffect(symbolScale)
-                    .frame(width: 20)
-                Text(title)
-                    .font(.headline)
-                Spacer()
-                Button("Reset", systemImage: "arrow.counterclockwise") {
-                    model.changeAdjustments("Reset \(title)", reset)
-                }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .help("Reset \(title)")
-                Toggle("Enable \(title)", isOn: animatedEnabled)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
+        InspectorCard(title) {
+            CardResetButton("Reset \(title)") {
+                model.changeAdjustments("Reset \(title)", reset)
             }
-
-            VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 0) {
-                    VStack(spacing: 9) {
-                        primary()
-                    }
+            Toggle("Enable \(title)", isOn: animatedEnabled)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+        } content: {
+            if enabled {
+                VStack(alignment: .leading, spacing: DMLayout.cardSpacing) {
+                    primary()
 
                     if showsAdvanced {
-                        Button {
-                            withAnimation(moreAnimation) {
-                                isExpanded.toggle()
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                                Text("More")
-                                Spacer(minLength: 0)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .font(.caption)
-                        .padding(.top, 12)
-                        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-                    }
-                }
-                .padding(.top, 12)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear.preference(
-                            key: AccordionHeightPreferenceKey.self,
-                            value: [baseMeasurementID: proxy.size.height]
-                        )
-                    }
-                }
-
-                if showsAdvanced {
-                    VStack(spacing: 9) {
-                        advanced()
-                    }
-                    .padding(.top, 12)
-                    .background {
-                        GeometryReader { proxy in
-                            Color.clear.preference(
-                                key: AccordionHeightPreferenceKey.self,
-                                value: [advancedMeasurementID: proxy.size.height]
-                            )
+                        MoreButton(isExpanded: $isExpanded)
+                        if isExpanded {
+                            advanced()
                         }
                     }
-                    .allowsHitTesting(enabled && isExpanded)
-                    .accessibilityHidden(!enabled || !isExpanded)
                 }
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(height: visibleBodyHeight, alignment: .top)
-            .mask {
-                AccordionFeatherMask()
-            }
-            .allowsHitTesting(enabled)
-            .accessibilityHidden(!enabled)
-            .onPreferenceChange(AccordionHeightPreferenceKey.self) { measurements in
-                if let measuredBaseHeight = measurements[baseMeasurementID],
-                   abs(baseHeight - measuredBaseHeight) > 0.5 {
-                    baseHeight = measuredBaseHeight
-                }
-                if let measuredAdvancedHeight = measurements[advancedMeasurementID],
-                   abs(advancedHeight - measuredAdvancedHeight) > 0.5 {
-                    advancedHeight = measuredAdvancedHeight
-                }
-            }
-            .animation(effectAnimation, value: enabled)
-            .animation(moreAnimation, value: isExpanded)
         }
-        .padding(.horizontal, 13)
-        .padding(.top, 13)
-        .padding(.bottom, enabled ? 13 - featherClearance : 13)
-        .cardBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .animation(effectAnimation, value: enabled)
+        // Content folding in or out stays inside the card while it resizes.
+        .clipShape(RoundedRectangle(cornerRadius: DMRadius.medium, style: .continuous))
     }
 
     private var animatedEnabled: Binding<Bool> {
-        Binding(
-            get: { enabled },
-            set: { newValue in
-                withAnimation(effectAnimation) {
-                    model.changeAdjustments(newValue ? "Enable \(title)" : "Disable \(title)") {
-                        enabled = newValue
-                    }
+        Binding {
+            enabled
+        } set: { newValue in
+            withDMAnimation(.smooth) {
+                model.changeAdjustments(newValue ? "Enable \(title)" : "Disable \(title)") {
+                    enabled = newValue
                 }
-            }
-        )
-    }
-
-    private var effectAnimation: Animation {
-        reduceMotion
-            ? .linear(duration: 0.01)
-            : .smooth(duration: 0.24)
-    }
-
-    private var moreAnimation: Animation {
-        reduceMotion
-            ? .linear(duration: 0.01)
-            : .smooth(duration: 0.22)
-    }
-
-    private var visibleBodyHeight: CGFloat {
-        guard enabled else { return 0 }
-        // Let the feather finish in clear space after the last visible control.
-        // The same amount is removed from the card's outer bottom inset, keeping
-        // the final content-to-edge spacing unchanged.
-        return baseHeight + (isExpanded ? advancedHeight : 0) + featherClearance
-    }
-
-    private var featherClearance: CGFloat { 10 }
-}
-
-private struct AccordionFeatherMask: View {
-    var body: some View {
-        GeometryReader { proxy in
-            let featherHeight = min(10, proxy.size.height)
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(.white)
-                    .frame(height: max(0, proxy.size.height - featherHeight))
-                LinearGradient(
-                    colors: [.white, .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: featherHeight)
             }
         }
     }
 }
 
-private struct AccordionHeightPreferenceKey: PreferenceKey {
-    static let defaultValue: [UUID: CGFloat] = [:]
+/// Shows or hides an effect's less-used sliders.
+private struct MoreButton: View {
+    @Binding var isExpanded: Bool
 
-    static func reduce(value: inout [UUID: CGFloat], nextValue: () -> [UUID: CGFloat]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, latest in latest })
+    var body: some View {
+        Button {
+            withDMAnimation(.smooth) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.right")
+                    .imageScale(.small)
+                    .fontWeight(.semibold)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .accessibilityHidden(true)
+                Text("More")
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
     }
 }
 
-/// One adjustment: its name, its value and a slider. Double-click the name to
+/// One adjustment on DMKit's `InspectorSlider`: double-click it or its name to
 /// put back the recipe's own value, which a tick marks under the track; click
-/// the value to type an exact one.
+/// the value to type an exact one. A drag, a run of arrow-key nudges, a typed
+/// value or a reset is one step on Edit ▸ Undo.
 private struct ParameterSlider: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.isEnabled) private var isEnabled
 
     let title: String
     @Binding var value: Double
     let defaultValue: Double
     let range: ClosedRange<Double>
-    let display: ParameterDisplay
+    let format: SliderValueFormat
     /// What Edit ▸ Undo calls a change, where the title alone is ambiguous.
     let undoName: String
-
-    /// The value being typed, while the readout is a field.
-    @State private var typedValue: String?
-    @FocusState private var isTyping: Bool
-    @FocusState private var isSliderFocused: Bool
 
     init(
         _ title: String,
@@ -582,127 +448,28 @@ private struct ParameterSlider: View {
         _value = value
         self.defaultValue = defaultValue
         self.range = range
-        self.display = display ?? .proportion(in: range)
+        self.format = SliderValueFormat(display ?? .proportion(in: range))
         self.undoName = undoName ?? title
     }
 
     var body: some View {
-        VStack(spacing: 4) {
-            HStack {
-                // The double-click lives on the label alone, so a single click
-                // on the readout isn't held back waiting for a second one.
-                HStack {
-                    Text(title)
-                    Spacer()
+        InspectorSlider(
+            title,
+            value: value,
+            in: range,
+            default: defaultValue,
+            format: format,
+            preview: { newValue in
+                // Every change joins the step open for this slider; `commit`
+                // closes it when the drag, nudges or typing end.
+                model.changeAdjustments(actionName(for: newValue), coalescingKey: undoKey) {
+                    value = newValue
                 }
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2, perform: resetToDefault)
-                .help("Double-click to reset to the recipe’s value")
-                readout
+            },
+            commit: {
+                model.endCoalescedChanges(undoKey)
             }
-            .font(.caption)
-
-            Slider(value: sliderValue, in: range) { isEditing in
-                // Letting go ends the drag's undo step.
-                if !isEditing {
-                    model.endCoalescedChanges(undoKey)
-                }
-            }
-            .tint(.accentColor)
-            .background(SliderDoubleClickReset(perform: resetToDefault))
-            .background {
-                DefaultValueTick(fraction: defaultFraction)
-            }
-            .focused($isSliderFocused)
-            .onChange(of: isSliderFocused) { _, isFocused in
-                if !isFocused {
-                    model.endCoalescedChanges(undoKey)
-                }
-            }
-            .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
-                let direction: Double = press.key == .leftArrow || press.key == .downArrow ? -1 : 1
-                nudge(by: direction * (press.modifiers.contains(.shift) ? 10 : 1))
-                return .handled
-            }
-            .accessibilityLabel(title)
-            .accessibilityValue(display.accessibilityText(for: value))
-            .accessibilityAdjustableAction { direction in
-                switch direction {
-                case .increment: nudge(by: 1)
-                case .decrement: nudge(by: -1)
-                @unknown default: break
-                }
-            }
-            .accessibilityAction(named: "Reset to Recipe Value", resetToDefault)
-        }
-    }
-
-    @ViewBuilder private var readout: some View {
-        if typedValue != nil {
-            HStack(spacing: 3) {
-                TextField(title, text: typedText)
-                    .textFieldStyle(.plain)
-                    .multilineTextAlignment(.trailing)
-                    .monospacedDigit()
-                    .frame(width: 40)
-                    .padding(.horizontal, 4)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4, style: .continuous))
-                    .focused($isTyping)
-                    .task { isTyping = true }
-                    .background(EndEditingOnOutsideClick())
-                    .onSubmit(commitTypedValue)
-                    .onExitCommand { typedValue = nil }
-                    .onChange(of: isTyping) { _, isTyping in
-                        // Moving on keeps what was typed, as in any Mac field.
-                        if !isTyping {
-                            commitTypedValue()
-                        }
-                    }
-                    .accessibilityLabel(title)
-                if !display.unit.symbol.isEmpty {
-                    Text(display.unit.symbol)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        } else {
-            Button {
-                typedValue = display.editingText(for: value)
-            } label: {
-                Text(display.text(for: value))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .pointerStyle(.horizontalText)
-            .help("Click to type a value")
-            .accessibilityLabel("\(title) Value")
-            .accessibilityValue(display.accessibilityText(for: value))
-            .accessibilityHint("Type an exact value")
-        }
-    }
-
-    private var sliderValue: Binding<Double> {
-        Binding {
-            value
-        } set: { newValue in
-            setValue(newValue, as: undoName, coalescing: true)
-        }
-    }
-
-    private var typedText: Binding<String> {
-        Binding {
-            typedValue ?? ""
-        } set: { text in
-            typedValue = text
-        }
-    }
-
-    /// Where the recipe's own value sits along the track.
-    private var defaultFraction: Double {
-        let span = range.upperBound - range.lowerBound
-        guard span > 0 else { return 0 }
-        return min(1, max(0, (defaultValue - range.lowerBound) / span))
+        )
     }
 
     /// One slider's drags and nudges each make a single undo step.
@@ -710,128 +477,98 @@ private struct ParameterSlider: View {
         "slider \(undoName)"
     }
 
-    private func setValue(_ newValue: Double, as actionName: String, coalescing: Bool = false) {
-        model.changeAdjustments(actionName, coalescingKey: coalescing ? undoKey : nil) {
-            value = newValue
+    /// “Reset Exposure” for a change straight to the recipe's value, otherwise “Exposure”.
+    private func actionName(for newValue: Double) -> String {
+        // TODO(DMKit): InspectorSlider doesn't say whether a change is a reset, a drag,
+        // a nudge or a typed value. A first change that lands exactly on the default,
+        // with no drag or nudge under way, is taken to be a reset.
+        let isContinuingStep = model.openUndoStep?.key == AnyHashable(undoKey)
+        return newValue == defaultValue && !isContinuingStep ? "Reset \(undoName)" : undoName
+    }
+}
+
+extension SliderValueFormat {
+    /// How GranularCore's display for an adjustment reads in DMKit's slider:
+    /// the same scale, sign, decimals, unit and arrow-key step.
+    init(_ display: ParameterDisplay) {
+        self.init(
+            scale: display.scale,
+            fractionDigits: display.fractionDigits,
+            isSigned: display.isSigned,
+            unit: Unit(display.unit),
+            step: display.step
+        )
+    }
+}
+
+extension SliderValueFormat.Unit {
+    init(_ unit: ParameterDisplay.Unit) {
+        switch unit {
+        case .none: self = SliderValueFormat.Unit.none
+        case .percent: self = .percent
+        case .stops: self = .stops
+        case .micrometers: self = .micrometers
         }
     }
 
-    private func resetToDefault() {
-        guard isEnabled else { return }
-        setValue(defaultValue, as: "Reset \(undoName)")
-    }
+    /// Grain size, in microns on a 35mm frame.
+    static let micrometers = SliderValueFormat.Unit(
+        symbol: "µm",
+        spokenName: "micrometers",
+        spellings: ["µm", "μm", "um", "microns", "micron"]
+    )
+}
 
-    private func nudge(by steps: Double) {
-        setValue(display.stepped(value, by: steps, in: range), as: undoName, coalescing: true)
-    }
+/// The point an effect centers on, set by clicking the image.
+private struct CenterControlRow: View {
+    @Environment(AppModel.self) private var model
 
-    private func commitTypedValue() {
-        guard let text = typedValue else { return }
-        typedValue = nil
-        guard let typed = display.storedValue(from: text, in: range) else {
-            if !text.trimmingCharacters(in: .whitespaces).isEmpty {
-                NSSound.beep()
+    let title: String
+    let target: EffectCenterTarget
+    @Binding var x: Double
+    @Binding var y: Double
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+            Spacer()
+
+            HStack(spacing: 7) {
+                Text("X \(percentage(x))")
+                Text("Y \(percentage(y))")
             }
-            return
-        }
-        setValue(typed, as: undoName)
-    }
-}
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
 
-/// Double-clicking a slider resets it, as in other Mac creative apps. The
-/// slider is an AppKit control that keeps its clicks to itself, so this
-/// marks where the slider is, and the inspector’s `SliderResetMonitor`
-/// watches for double-clicks landing there rather than adding a gesture.
-private struct SliderDoubleClickReset: NSViewRepresentable {
-    @Environment(\.sliderResetMonitor) private var monitor
-    let perform: () -> Void
-
-    func makeNSView(context: Context) -> WatchingView {
-        let view = WatchingView()
-        view.perform = perform
-        view.monitor = monitor
-        return view
-    }
-
-    func updateNSView(_ view: WatchingView, context: Context) {
-        view.perform = perform
-        view.monitor = monitor
-    }
-
-    final class WatchingView: NSView {
-        var perform: () -> Void = {}
-        var monitor: SliderResetMonitor? {
-            didSet {
-                guard monitor !== oldValue else { return }
-                oldValue?.remove(self)
-                if window != nil { monitor?.add(self) }
+            Button {
+                withDMAnimation(.snappy) {
+                    model.showOriginal = false
+                    model.activeCenterTarget = isActive ? nil : target
+                }
+            } label: {
+                Image(systemName: isActive ? "scope" : "viewfinder")
+                    .frame(width: 22, height: 20)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(isActive ? .accentColor : nil)
+            .disabled(model.selectedSourceURL == nil)
+            .help(isActive ? "Finish adjusting \(title.lowercased())" : "Adjust \(title.lowercased()) on image")
+            .accessibilityLabel(isActive ? "Finish \(target.title) center adjustment" : "Adjust \(target.title) center on image")
         }
+    }
 
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    private var isActive: Bool {
+        model.activeCenterTarget == target
+    }
 
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            if window != nil {
-                monitor?.add(self)
-            } else {
-                monitor?.remove(self)
-            }
-        }
+    private func percentage(_ value: Double) -> String {
+        value.formatted(.percent.precision(.fractionLength(0)))
     }
 }
 
-/// The inspector’s one local event monitor for double-clicks on its sliders.
-/// It runs while any slider is in a window, and resets whichever slider the
-/// double-click lands on.
-final class SliderResetMonitor {
-    private var views: [ObjectIdentifier: WeakView] = [:]
-    private var monitor: Any?
-
-    private struct WeakView {
-        weak var view: SliderDoubleClickReset.WatchingView?
-    }
-
-    fileprivate func add(_ view: SliderDoubleClickReset.WatchingView) {
-        views[ObjectIdentifier(view)] = WeakView(view: view)
-        guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard event.clickCount == 2 else { return event }
-            MainActor.assumeIsolated { self?.resetSlider(under: event) }
-            return event
-        }
-    }
-
-    fileprivate func remove(_ view: SliderDoubleClickReset.WatchingView) {
-        views[ObjectIdentifier(view)] = nil
-        views = views.filter { $0.value.view != nil }
-        if views.isEmpty, let monitor {
-            NSEvent.removeMonitor(monitor)
-            self.monitor = nil
-        }
-    }
-
-    private func resetSlider(under event: NSEvent) {
-        for case let view? in views.values.map(\.view) where event.window === view.window {
-            let point = view.convert(event.locationInWindow, from: nil)
-            if view.bounds.contains(point) {
-                // After the slider has taken the click, so the reset wins.
-                DispatchQueue.main.async { view.perform() }
-            }
-        }
-    }
-}
-
-private struct SliderResetMonitorKey: EnvironmentKey {
-    static let defaultValue: SliderResetMonitor? = nil
-}
-
-private extension EnvironmentValues {
-    var sliderResetMonitor: SliderResetMonitor? {
-        get { self[SliderResetMonitorKey.self] }
-        set { self[SliderResetMonitorKey.self] = newValue }
-    }
-}
+// MARK: - Shared with other panels
 
 /// Ends typing in a field when the next click lands anywhere else, which
 /// AppKit doesn't do by itself for clicks on non-focusable content.
@@ -861,78 +598,6 @@ struct EndEditingOnOutsideClick: NSViewRepresentable {
                 return event
             }
         }
-    }
-}
-
-/// A small mark under the track at the recipe's own value, covered by the
-/// knob when the slider sits there.
-private struct DefaultValueTick: View {
-    let fraction: Double
-
-    var body: some View {
-        GeometryReader { proxy in
-            // The knob's centre travels between half its width from either end.
-            let inset: CGFloat = 10
-            Capsule()
-                .fill(.secondary)
-                .frame(width: 2, height: 3)
-                .position(
-                    x: inset + (proxy.size.width - inset * 2) * fraction,
-                    y: proxy.size.height / 2 + 6
-                )
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-}
-
-private struct CenterControlRow: View {
-    @Environment(AppModel.self) private var model
-
-    let title: String
-    let target: EffectCenterTarget
-    let tint: Color
-    @Binding var x: Double
-    @Binding var y: Double
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(title)
-            Spacer()
-
-            HStack(spacing: 7) {
-                Text("X \(percentage(x))")
-                Text("Y \(percentage(y))")
-            }
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-
-            Button {
-                withAnimation(.smooth(duration: 0.18)) {
-                    model.showOriginal = false
-                    model.activeCenterTarget = isActive ? nil : target
-                }
-            } label: {
-                Image(systemName: isActive ? "scope" : "viewfinder")
-                    .frame(width: 22, height: 20)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .tint(isActive ? tint : nil)
-            .disabled(model.selectedSourceURL == nil)
-            .help(isActive ? "Finish adjusting \(title.lowercased())" : "Adjust \(title.lowercased()) on image")
-            .accessibilityLabel(isActive ? "Finish \(target.title) center adjustment" : "Adjust \(target.title) center on image")
-        }
-        .font(.caption)
-    }
-
-    private var isActive: Bool {
-        model.activeCenterTarget == target
-    }
-
-    private func percentage(_ value: Double) -> String {
-        value.formatted(.percent.precision(.fractionLength(0)))
     }
 }
 
