@@ -27,7 +27,7 @@ extension AppModel {
     }
 
     /// Changes the adjustments as one step on Edit ▸ Undo, named for what
-    /// changed (“Undo Exposure”). Changes sharing a `coalescingKey` — the ticks
+    /// changed (“Undo Change Exposure”). Changes sharing a `coalescingKey` — the ticks
     /// of one slider drag, a run of arrow-key nudges — join the step already
     /// open for that key instead of starting their own.
     func changeAdjustments(_ actionName: String, coalescingKey: AnyHashable? = nil, _ change: () -> Void) {

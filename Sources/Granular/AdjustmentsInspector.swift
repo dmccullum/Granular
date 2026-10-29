@@ -433,7 +433,7 @@ private struct ParameterSlider: View {
     let defaultValue: Double
     let range: ClosedRange<Double>
     let format: SliderValueFormat
-    /// What Edit ▸ Undo calls a change, where the title alone is ambiguous.
+    /// The adjustment Edit ▸ Undo names (“Change Vignette Amount”), where the title alone is ambiguous.
     let undoName: String
 
     init(
@@ -459,14 +459,15 @@ private struct ParameterSlider: View {
             in: range,
             default: defaultValue,
             format: format,
-            preview: { newValue in
+            preview: { newValue, change in
                 // Every change joins the step open for this slider; `commit`
-                // closes it when the drag, nudges or typing end.
-                model.changeAdjustments(actionName(for: newValue), coalescingKey: undoKey) {
+                // closes it when the drag, nudges or typing end. A reset is
+                // “Reset Exposure”, anything else “Change Exposure”.
+                model.changeAdjustments(change.undoActionName(for: undoName), coalescingKey: undoKey) {
                     value = newValue
                 }
             },
-            commit: {
+            commit: { _ in
                 model.endCoalescedChanges(undoKey)
             }
         )
@@ -475,15 +476,6 @@ private struct ParameterSlider: View {
     /// One slider's drags and nudges each make a single undo step.
     private var undoKey: String {
         "slider \(undoName)"
-    }
-
-    /// “Reset Exposure” for a change straight to the recipe's value, otherwise “Exposure”.
-    private func actionName(for newValue: Double) -> String {
-        // TODO(DMKit): InspectorSlider doesn't say whether a change is a reset, a drag,
-        // a nudge or a typed value. A first change that lands exactly on the default,
-        // with no drag or nudge under way, is taken to be a reset.
-        let isContinuingStep = model.openUndoStep?.key == AnyHashable(undoKey)
-        return newValue == defaultValue && !isContinuingStep ? "Reset \(undoName)" : undoName
     }
 }
 
