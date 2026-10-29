@@ -40,6 +40,10 @@ nonisolated struct SeededGenerator: RandomNumberGenerator {
 /// The camera body: bead-blasted aluminum in light appearance, dark
 /// magnesium in dark. A fine, even grain rather than a brushed direction.
 struct AlloySurface: View {
+    /// Where the sheen's light falls: high on the left, as from a lamp above.
+    static let restingSheen = UnitPoint(x: 0.3, y: 0)
+
+    var sheenCenter = restingSheen
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -58,7 +62,7 @@ struct AlloySurface: View {
             // A soft, broad sheen, as on a satin-finished casting.
             RadialGradient(
                 colors: [.white.opacity(isDark ? 0.04 : 0.22), .white.opacity(0)],
-                center: UnitPoint(x: 0.3, y: 0),
+                center: sheenCenter,
                 startRadius: 0,
                 endRadius: 520
             )

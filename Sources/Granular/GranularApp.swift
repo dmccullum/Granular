@@ -164,10 +164,16 @@ struct GranularDesktopApp: App {
             )
         }
 
-        AboutScene(links: AboutLinks(
-            sourceCode: GranularLinks.repository,
-            acknowledgements: GranularLinks.acknowledgements
-        )) {
+        // The camera metal follows the system appearance, as Instant mode's body
+        // does: both finishes are about as light or dark as the stock window, so
+        // DMKit's label colors read on them as they do there.
+        AboutScene(
+            links: AboutLinks(
+                sourceCode: GranularLinks.repository,
+                acknowledgements: GranularLinks.acknowledgements
+            ),
+            backdrop: AnyView(AboutCameraMetal())
+        ) {
             PipelineDial()
         }
 

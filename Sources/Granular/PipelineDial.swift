@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import SwiftUI
 
 /// The pipeline as a top-plate dial, after the Leica M's shutter-speed
@@ -6,15 +7,8 @@ import SwiftUI
 /// mark on the plate. It spins under the pointer and clicks into each stop.
 /// It's the signature moment in the About window.
 struct PipelineDial: View {
-    private static let stages: [(symbol: String, name: String)] = [
-        ("film", "Film Tone"),
-        ("circle.dotted.circle", "Vignette"),
-        ("drop.halffull", "Lens Blur"),
-        ("circle.dotted", "Diffusion"),
-        ("sun.horizon", "Halation"),
-        ("mountain.2", "Landscape Glow"),
-        ("aqi.medium", "Film Grain")
-    ]
+    /// The same names and symbols as the inspector's cards.
+    private static let stages = PipelineStage.allCases
     private static let step = 360.0 / Double(stages.count)
     private static let diameter: CGFloat = 132
 
@@ -41,9 +35,9 @@ struct PipelineDial: View {
                     .padding(9)
 
                 ForEach(Array(Self.stages.enumerated()), id: \.offset) { index, stage in
-                    Image(systemName: stage.symbol)
-                        // The mountains and grain are drawn wider and denser than the rest.
-                        .font(.system(size: 13 * (stage.symbol == "mountain.2" ? 0.8 : stage.symbol == "aqi.medium" ? 0.85 : 1), weight: .semibold))
+                    Image(systemName: stage.systemImage)
+                        // Wide symbols shrink to the round ones' footprint.
+                        .font(.system(size: 13 * stage.opticalScale, weight: .semibold))
                         .engraved()
                         .opacity(index == selectedIndex ? 1 : 0.72)
                         .offset(y: -(Self.diameter / 2 - 30))
@@ -181,4 +175,37 @@ private struct DialFace: View {
                 .shadow(color: .white.opacity(isDark ? 0.08 : 0.6), radius: 0, y: 1)
         }
     }
+}
+
+/// The About window's backdrop: the camera body from Instant mode, bead-blasted
+/// aluminum in light appearance and dark magnesium in dark. While the pointer is
+/// over the window the sheen leans toward it, as a satin casting catches a lamp
+/// when you tilt it; with Reduce Motion it stays put.
+struct AboutCameraMetal: View {
+    @Environment(\.aboutPointerLocation) private var pointer
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GeometryReader { proxy in
+            AlloySurface(sheenCenter: sheenCenter(in: proxy.size))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.6), value: pointer)
+        }
+    }
+
+    private func sheenCenter(in size: CGSize) -> UnitPoint {
+        let rest = AlloySurface.restingSheen
+        guard let pointer, !reduceMotion, size.width > 0, size.height > 0 else { return rest }
+        // Part of the way toward the pointer, and less so downward, so the light
+        // still reads as coming from above.
+        return UnitPoint(
+            x: rest.x + (pointer.x / size.width - rest.x) * 0.6,
+            y: rest.y + (pointer.y / size.height - rest.y) * 0.35
+        )
+    }
+}
+
+#Preview("Pipeline dial on the camera metal") {
+    PipelineDial()
+        .padding(40)
+        .background(AboutCameraMetal())
 }

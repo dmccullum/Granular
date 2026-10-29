@@ -62,8 +62,7 @@ private struct FilmToneCard: View {
 
     var body: some View {
         EffectCard(
-            title: "Film Tone",
-            systemImage: "film",
+            stage: .filmTone,
             enabled: $settings.isEnabled,
             reset: reset,
             showsAdvanced: false
@@ -112,8 +111,7 @@ private struct LightShapingCard: View {
 
     var body: some View {
         EffectCard(
-            title: "Vignette",
-            systemImage: "smallcircle.filled.circle",
+            stage: .vignette,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -152,8 +150,7 @@ private struct LensBlurCard: View {
 
     var body: some View {
         EffectCard(
-            title: "Lens Blur",
-            systemImage: "camera.aperture",
+            stage: .lensBlur,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -189,8 +186,7 @@ private struct DiffusionCard: View {
 
     var body: some View {
         EffectCard(
-            title: "Diffusion",
-            systemImage: "camera.filters",
+            stage: .diffusion,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -223,8 +219,7 @@ private struct HalationCard: View {
 
     var body: some View {
         EffectCard(
-            title: "Halation",
-            systemImage: "sun.horizon",
+            stage: .halation,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -268,8 +263,7 @@ private struct LandscapeGlowCard: View {
 
     var body: some View {
         EffectCard(
-            title: "Landscape Glow",
-            systemImage: "mountain.2",
+            stage: .landscapeGlow,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -301,8 +295,7 @@ private struct GrainCard: View {
 
     var body: some View {
         EffectCard(
-            title: "Film Grain",
-            systemImage: "aqi.medium",
+            stage: .filmGrain,
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -353,8 +346,7 @@ private struct GrainCard: View {
 private struct EffectCard<Primary: View, Advanced: View>: View {
     @Environment(AppModel.self) private var model
 
-    let title: String
-    let systemImage: String
+    let stage: PipelineStage
     @Binding var enabled: Bool
     let reset: () -> Void
     var showsAdvanced = true
@@ -363,8 +355,10 @@ private struct EffectCard<Primary: View, Advanced: View>: View {
 
     @State private var isExpanded = false
 
+    private var title: String { stage.name }
+
     var body: some View {
-        InspectorCard(title, systemImage: systemImage, isActive: enabled) {
+        InspectorCard(title, systemImage: stage.systemImage, isActive: enabled) {
             CardResetButton("Reset \(title)") {
                 model.changeAdjustments("Reset \(title)", reset)
             }
