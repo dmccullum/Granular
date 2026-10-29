@@ -144,6 +144,8 @@ struct GranularDesktopApp: App {
         .defaultSize(model.initialWindowSize)
         .restorationBehavior(.disabled)
         .commands {
+            // App › About opens the AboutScene below, which doesn't add the item itself.
+            AboutCommands()
             MainWindowCommands()
             ViewerCommands(model: model)
             // View ▸ Show/Hide Sidebar (⌃⌘S) for the Recipe Library's list.
