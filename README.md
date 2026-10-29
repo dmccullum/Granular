@@ -4,7 +4,7 @@
 
 Granular is a native macOS app for giving still images a more photographic, film-like finish—quickly. It combines film tone, light shaping, lens diffusion, halation, and light-responsive grain in a focused workflow built for macOS.
 
-<p align="center"><img src="docs/images/instant.png" alt="Granular Instant mode: a film canister beside a strip of processed frames" width="600"></p>
+<p align="center"><img src="docs/images/instant.png" alt="Granular Instant mode: a Classic 35 film canister beside a film strip with a drop zone for images" width="600"></p>
 
 ## What it does
 
