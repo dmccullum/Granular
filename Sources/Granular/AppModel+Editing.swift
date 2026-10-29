@@ -79,7 +79,10 @@ extension AppModel {
         if images.count > 1 {
             showStatus(
                 "Opened “\(opened.lastPathComponent)”. Edit works on one image at a time.",
-                action: StatusMessage.Action("Process All \(images.count) in Instant") { [weak self] in
+                action: StatusMessage.Action(
+                    "Process All \(images.count) in Instant",
+                    help: "Switch to Instant mode and process every image you dropped with this recipe"
+                ) { [weak self] in
                     self?.processInInstant(images)
                 }
             )
