@@ -76,13 +76,14 @@ struct ContentView: View {
                 }
                 .sharedBackgroundVisibility(.hidden)
             }
+            ToolbarItem(placement: .primaryAction) {
+                ModePicker()
+            }
+            // Share sits to the right of the mode, as in Glamshot.
             if model.operationMode == .edit {
                 ToolbarItem(placement: .primaryAction) {
                     EditorShareButton()
                 }
-            }
-            ToolbarItem(placement: .primaryAction) {
-                ModePicker()
             }
         }
         .onChange(of: model.operationMode) { _, _ in
