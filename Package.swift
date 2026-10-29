@@ -13,8 +13,8 @@ let package = Package(
         .executable(name: "Granular", targets: ["Granular"])
     ],
     dependencies: [
-        // The family's shared Mac components, checked out beside this repository.
-        .package(path: "../DMKit")
+        // The family's shared Mac components.
+        .package(url: "https://github.com/dmccullum/DMKit.git", from: "1.0.0")
     ],
     targets: [
         .target(

@@ -1,0 +1,15 @@
+{
+  "originHash" : "cd1ee2b05ea40787b1704ecb918e7c7317acafd24b0ebdcb345859a2a704d3ec",
+  "pins" : [
+    {
+      "identity" : "dmkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/dmccullum/DMKit.git",
+      "state" : {
+        "revision" : "a77e75290c0e2d34adff06da5054e7e0e8dc9234",
+        "version" : "1.0.0"
+      }
+    }
+  ],
+  "version" : 3
+}
