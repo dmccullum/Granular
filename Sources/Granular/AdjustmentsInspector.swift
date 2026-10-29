@@ -63,6 +63,7 @@ private struct FilmToneCard: View {
     var body: some View {
         EffectCard(
             title: "Film Tone",
+            systemImage: "film",
             enabled: $settings.isEnabled,
             reset: reset,
             showsAdvanced: false
@@ -112,6 +113,7 @@ private struct LightShapingCard: View {
     var body: some View {
         EffectCard(
             title: "Vignette",
+            systemImage: "smallcircle.filled.circle",
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -151,6 +153,7 @@ private struct LensBlurCard: View {
     var body: some View {
         EffectCard(
             title: "Lens Blur",
+            systemImage: "camera.aperture",
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -187,6 +190,7 @@ private struct DiffusionCard: View {
     var body: some View {
         EffectCard(
             title: "Diffusion",
+            systemImage: "camera.filters",
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -220,6 +224,7 @@ private struct HalationCard: View {
     var body: some View {
         EffectCard(
             title: "Halation",
+            systemImage: "sun.horizon",
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -264,6 +269,7 @@ private struct LandscapeGlowCard: View {
     var body: some View {
         EffectCard(
             title: "Landscape Glow",
+            systemImage: "mountain.2",
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -296,6 +302,7 @@ private struct GrainCard: View {
     var body: some View {
         EffectCard(
             title: "Film Grain",
+            systemImage: "aqi.medium",
             enabled: $settings.isEnabled,
             reset: reset
         ) {
@@ -340,12 +347,14 @@ private struct GrainCard: View {
     }
 }
 
-/// One effect: its name, Reset and on/off switch in the header, its main
-/// sliders, and the rest under More. Switched off, it folds to its header.
+/// One effect: its symbol, name, Reset and on/off switch in the header, its
+/// main sliders, and the rest under More. Switched off, it folds to its header
+/// and dims.
 private struct EffectCard<Primary: View, Advanced: View>: View {
     @Environment(AppModel.self) private var model
 
     let title: String
+    let systemImage: String
     @Binding var enabled: Bool
     let reset: () -> Void
     var showsAdvanced = true
@@ -355,7 +364,7 @@ private struct EffectCard<Primary: View, Advanced: View>: View {
     @State private var isExpanded = false
 
     var body: some View {
-        InspectorCard(title) {
+        InspectorCard(title, systemImage: systemImage, isActive: enabled) {
             CardResetButton("Reset \(title)") {
                 model.changeAdjustments("Reset \(title)", reset)
             }
