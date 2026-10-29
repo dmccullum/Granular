@@ -91,9 +91,7 @@ final class GranularApplicationDelegate: NSObject, NSApplicationDelegate {
         // while it's in the background, so look for each file here too.
         let urls = (ImageServiceProvider.shared.model?.recentImages.items ?? []).compactMap { item -> URL? in
             let url = item.resolve().url
-            let isAccessing = url.startAccessingSecurityScopedResource()
-            defer { if isAccessing { url.stopAccessingSecurityScopedResource() } }
-            return FileManager.default.fileExists(atPath: url.path) ? url : nil
+            return url.withSecurityScope { FileManager.default.fileExists(atPath: url.path) } ? url : nil
         }
         guard !urls.isEmpty else { return nil }
 
