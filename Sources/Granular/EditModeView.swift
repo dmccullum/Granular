@@ -999,7 +999,7 @@ private struct EditorEmptyState: View {
         ContentUnavailableView {
             Label("Open an Image to Begin", systemImage: "photo.badge.plus")
         } description: {
-            Text("Adjust the recipe with a live preview, then export when it feels right.")
+            Text("Adjust the recipe with a live preview, then export.")
         } actions: {
             Button("Open Image…") {
                 model.chooseImageForEditing()
