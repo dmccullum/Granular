@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import GranularCore
 import SwiftUI
 import UniformTypeIdentifiers
@@ -62,7 +63,10 @@ struct RecipeLibraryView: View {
             actions: { _ in Button("OK", role: .cancel) {} },
             message: { alert in Text(alert.message) }
         )
-        .background(WindowReader { model.attachRecipeLibraryWindow($0) })
+        // Before the window first shows, so its saved frame applies before it appears.
+        .background(WindowReader(timing: .immediate) { window in
+            if let window { model.attachRecipeLibraryWindow(window) }
+        })
         .onAppear {
             keepSelectionValid()
             importWaitingRecipeFiles()
@@ -647,38 +651,6 @@ private struct CanisterPicker: View {
             CanisterGrid(recipe: recipe, selection: current, onChoose: onChoose)
         }
         .padding(14)
-    }
-}
-
-/// Hands over the window a view is in, once it's in one.
-// TODO(DMKit): DMKit's WindowReader reports on the next turn of the run loop,
-// after the window is on screen. This one reports at once, so the Recipe
-// Library's saved frame applies before it appears.
-private struct WindowReader: NSViewRepresentable {
-    let onWindow: (NSWindow) -> Void
-
-    func makeNSView(context: Context) -> ReportingView {
-        ReportingView(onWindow: onWindow)
-    }
-
-    func updateNSView(_ nsView: ReportingView, context: Context) {}
-
-    final class ReportingView: NSView {
-        let onWindow: (NSWindow) -> Void
-
-        init(onWindow: @escaping (NSWindow) -> Void) {
-            self.onWindow = onWindow
-            super.init(frame: .zero)
-        }
-
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            if let window { onWindow(window) }
-        }
     }
 }
 
