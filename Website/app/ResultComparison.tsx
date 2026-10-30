@@ -22,9 +22,9 @@ export default function ResultComparison() {
         className="comparison"
         style={{ "--position": `${position}%` } as CSSProperties}
       >
-        <img className="comparison-before" src={current.before} alt={`Original ${current.label.toLowerCase()} photograph`} />
+        <img className="comparison-before" src={current.before} alt={`${current.label} scene before Granular`} />
         <div className="comparison-after-wrap">
-          <img className="comparison-after" src={current.after} alt={`Granular-finished ${current.label.toLowerCase()} photograph`} />
+          <img className="comparison-after" src={current.after} alt={`${current.label} scene with Granular's film finish`} />
         </div>
         <span className="comparison-label comparison-label-before">ORIGINAL</span>
         <span className="comparison-label comparison-label-after">GRANULAR</span>

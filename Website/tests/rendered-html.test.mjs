@@ -103,7 +103,7 @@ test("links a 64 px favicon and a 180 px apple-touch-icon", () => {
   assert.deepEqual(pngSize(appleTouchIcon), [180, 180]);
 });
 
-test("the header icon, closing icon and share image all use the same versioned app icon", () => {
+test("the header and closing icons use the same versioned app icon", () => {
   const icons = attributes("img", "src").filter((src) => src.includes("app-icon.png"));
   assert.equal(icons.length, 2, "header and closing icons");
   const [version] = icons[0].match(/\?v=\d+$/) ?? [];
@@ -111,9 +111,21 @@ test("the header icon, closing icon and share image all use the same versioned a
   assert.ok(icons.every((src) => src.endsWith(version)));
   assert.deepEqual(pngSize(icons[0]), [1024, 1024]);
 
+});
+
+test("share previews use the 1200 × 630 share card at an absolute URL, with one title and description", () => {
   // Share previews are fetched by other servers, so they need absolute URLs on the live site.
-  const ogImage = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1];
-  const twitterImage = html.match(/<meta name="twitter:image" content="([^"]+)"/)?.[1];
-  assert.equal(ogImage, `${liveSite}app-icon.png${version}`);
-  assert.equal(twitterImage, ogImage);
+  const meta = (attr, key) => html.match(new RegExp(`<meta ${attr}="${key}" content="([^"]+)"`))?.[1];
+  const ogImage = meta("property", "og:image");
+  assert.match(ogImage, new RegExp(`^${liveSite.replace(/[.]/g, "\\.")}share-card\\.png\\?v=\\d+$`));
+  assert.equal(meta("name", "twitter:image"), ogImage);
+  assert.equal(meta("name", "twitter:card"), "summary_large_image");
+  assert.deepEqual(pngSize(ogImage.slice(liveSite.length - 1)), [1200, 630]);
+  const title = html.match(/<title>([^<]+)<\/title>/)[1];
+  assert.equal(title, "Granular — A film finish for still images");
+  assert.equal(meta("property", "og:title"), title);
+  assert.equal(meta("name", "twitter:title"), title);
+  const description = meta("name", "description");
+  assert.equal(meta("property", "og:description"), description);
+  assert.equal(meta("name", "twitter:description"), description);
 });

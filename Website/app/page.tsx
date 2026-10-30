@@ -8,7 +8,7 @@ const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${pat
 
 export const metadata: Metadata = {
   title: "Granular — A film finish for still images",
-  description: "A native Mac app for giving still photographs a softer, warmer finish.",
+  description: "A native Mac app for film tone, diffusion, halation, and light-responsive grain.",
 };
 
 export default function Home() {

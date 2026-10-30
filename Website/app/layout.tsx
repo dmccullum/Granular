@@ -7,18 +7,18 @@ const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${pat
 const siteUrl = "https://dmccullum.github.io/Granular";
 
 export const metadata: Metadata = {
-  title: "Granular — A photographic finish for still images",
+  title: "Granular — A film finish for still images",
   description: "A native Mac app for film tone, diffusion, halation, and light-responsive grain.",
   openGraph: {
-    title: "Granular — A photographic finish for still images",
+    title: "Granular — A film finish for still images",
     description: "A native Mac app for film tone, diffusion, halation, and light-responsive grain.",
-    images: [{ url: `${siteUrl}/app-icon.png?v=11`, width: 1024, height: 1024, alt: "Granular app icon" }],
+    images: [{ url: `${siteUrl}/share-card.png?v=1`, width: 1200, height: 630, alt: "Granular: a film finish for still images, beside a 35mm film canister" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Granular — A photographic finish for still images",
+    title: "Granular — A film finish for still images",
     description: "A native Mac app for film tone, diffusion, halation, and light-responsive grain.",
-    images: [`${siteUrl}/app-icon.png?v=11`],
+    images: [`${siteUrl}/share-card.png?v=1`],
   },
   icons: {
     icon: { url: asset("/favicon.png?v=11"), type: "image/png", sizes: "64x64" },
