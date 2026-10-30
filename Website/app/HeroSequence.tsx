@@ -12,7 +12,7 @@ const SUBJECT_BOTTOM = 0.71;
 const EASE_IN = 0.3;
 // Frames were rendered along a smoothstep, so frame t shows smoothstep(t) of the full turn; this inverts it.
 const frameForTurn = (turn: number) => 0.5 - Math.sin(Math.asin(1 - 2 * turn) / 3);
-const FRAME_COUNT = 32;
+const FRAME_COUNT = 63;
 // Ease in, then linear, with no slow-down at the end.
 const turnForProgress = (p: number) => {
   const slope = 1 / (1 - EASE_IN / 2);
@@ -20,7 +20,7 @@ const turnForProgress = (p: number) => {
 };
 
 type Props = {
-  // Folders holding f00.avif ... f31.avif at 2048 and 3072 pixels wide.
+  // Folders holding f00.avif ... f62.avif at 2048 and 3072 pixels wide.
   standard: string;
   dense: string;
 };
