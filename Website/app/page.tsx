@@ -37,7 +37,7 @@ export default function Home() {
         <div className="workbench-words"><span>Drop photos in</span><em>for instant results,</em><span>or edit live.</span></div>
         <div className="workbench-views">
           <figure className="app-frame edit-frame" data-parallax="-18">
-            <img src={asset("/granular-edit.webp?v=6")} alt="Granular Edit mode showing a balcony photo with the Classic 35 stock, and Vignette, Diffusion, and Halation switched on in the Adjustments sidebar" />
+            <img src={asset("/granular-edit.webp?v=6")} alt="Granular Edit mode showing a couple at breakfast on a balcony with the Classic 35 stock, and Vignette, Diffusion, and Halation switched on in the Adjustments sidebar" />
           </figure>
           <figure className="app-frame instant-frame" data-parallax="14">
             <img src={asset("/granular-instant.webp?v=6")} alt="Granular Instant mode: the Classic 35 canister beside a film strip with a drop target for images and a processed frame, saving to Downloads" />
