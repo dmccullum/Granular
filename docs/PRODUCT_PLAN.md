@@ -187,7 +187,7 @@ This follows Apple’s current guidance: Liquid Glass is intended for controls a
 
 ### Icon direction
 
-The shipped icon (`AppIcon.icon`, built in Icon Composer) is a 35 mm film canister seen straight on, in the yellow of the Classic 35 canister, proportioned after a real tin. It replaced the original droplet-and-grain concept and matches the Instant-mode canister. Shadowed elements sit on their own layer to avoid a boxed-shadow flash.
+The shipped icon (`AppIcon.icon`, built in Icon Composer) is a 35 mm film canister seen straight on, in the yellow of the Classic 35 canister, proportioned after a real tin, on a grained silver backdrop (graphite in dark). It replaced the original droplet-and-grain concept and matches the Instant-mode canister. Shadowed elements sit on their own layer to avoid a boxed-shadow flash.
 
 ## Built-in recipes
 

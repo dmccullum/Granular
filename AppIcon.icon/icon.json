@@ -1,20 +1,4 @@
 {
-  "fill": {
-    "linear-gradient": [
-      "display-p3:0.88767,0.89386,0.90113,1.00000",
-      "display-p3:0.68517,0.69753,0.71208,1.00000"
-    ],
-    "orientation": {
-      "start": {
-        "x": 0.2,
-        "y": 0.0
-      },
-      "stop": {
-        "x": 0.8,
-        "y": 1.0
-      }
-    }
-  },
   "fill-specializations": [
     {
       "value": {
@@ -75,6 +59,16 @@
           ]
         },
         {
+          "name": "nap",
+          "image-name": "nap.svg",
+          "hidden-specializations": [
+            {
+              "appearance": "tinted",
+              "value": true
+            }
+          ]
+        },
+        {
           "name": "body",
           "image-name-specializations": [
             {
@@ -126,6 +120,39 @@
         "enabled": true,
         "value": 0.1
       }
+    },
+    {
+      "name": "Backdrop",
+      "specular": false,
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      },
+      "layers": [
+        {
+          "name": "backdrop",
+          "glass": false,
+          "image-name-specializations": [
+            {
+              "value": "backdrop.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "backdrop-dark.png"
+            }
+          ],
+          "hidden-specializations": [
+            {
+              "appearance": "tinted",
+              "value": true
+            }
+          ]
+        }
+      ]
     }
   ],
   "supported-platforms": {

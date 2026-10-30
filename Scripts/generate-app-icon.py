@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""Generates AppIcon.icon, Granular's Icon Composer icon.
+"""Generates the previous Granular app icon as an Icon Composer document.
 
-A 35mm film canister stands in the left of the icon, seen straight on, with its film
+This script no longer builds the shipped icon. AppIcon.icon is now maintained directly as an Icon
+Composer document and is the source of truth: its canister sits on a grained silver backdrop
+(graphite in dark) that this script doesn't make. The script refuses to write over AppIcon.icon;
+set ICON_OUT to another .icon bundle to generate the earlier design or a variation of it.
+
+In the earlier design a 35mm film canister stands in the left of the icon, seen straight on, with its film
 leader coming out of the light-trap lip. The whole canister shows, set within Apple's
 icon grid, and its caps are as thin as a real tin's. Its lighting is computed from a cylinder so it reads round, the background is
 aluminum in light mode and magnesium in dark, and Clear/Tinted use their own
 high-contrast monochrome artwork.
 
-Run it after changing anything below, then build with Scripts/build-app.sh.
+usage: ICON_OUT=/path/to/Variation.icon python3 Scripts/generate-app-icon.py
 """
 
-import json, math, os, shutil
+import json, math, os, shutil, sys
 
 
 # ---------- colour: sRGB hex -> Display P3 string ----------
@@ -39,7 +44,12 @@ def rrect(x, y, w, h, r):
             "h%.2f a%.2f,%.2f 0 0 1 %.2f,%.2f v%.2f a%.2f,%.2f 0 0 1 %.2f,%.2f z" %
             (x+r, y, w-2*r, r, r, r, r, h-2*r, r, r, -r, r, -(w-2*r), r, r, -r, -r, -(h-2*r), r, r, r, -r))
 
-OUT = os.environ.get("ICON_OUT") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "AppIcon.icon")
+OUT = os.environ.get("ICON_OUT") or sys.exit("usage: ICON_OUT=/path/to/Variation.icon python3 Scripts/generate-app-icon.py")
+SHIPPED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "AppIcon.icon")
+if os.path.realpath(OUT.rstrip("/")) == os.path.realpath(SHIPPED):
+    sys.exit("refusing to replace %s: the shipped icon is edited in Icon Composer, not generated" % os.path.normpath(SHIPPED))
+if not OUT.rstrip("/").endswith(".icon"):
+    sys.exit("refusing to replace %s: the output must be an .icon bundle" % OUT)
 # Proportions follow a real 35mm canister, which stands 600 wide in the icon's left side.
 BODY_R = 560            # canister's right edge; its left edge is at 0
 CAP_H = 58              # the thin top and bottom caps
