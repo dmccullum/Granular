@@ -36,7 +36,7 @@ function loadOrder(count: number) {
 
 // Turns the hero slightly in space as the opening section scrolls away. The still stays in the page as the
 // poster and for screen readers; the canvas takes over once frames have decoded and the page has scrolled, never
-// on small screens, with reduced motion, with Save-Data, or if a frame fails to load.
+// with reduced motion, with Save-Data, or if a frame fails to load.
 export default function HeroSequence({ standard, dense }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -48,12 +48,13 @@ export default function HeroSequence({ standard, dense }: Props) {
     const context = canvas?.getContext("2d", { alpha: false });
     if (!canvas || !figure || !section || !still || !context) return;
 
-    const wide = window.matchMedia("(min-width: 641px)");
+    const phone = window.matchMedia("(max-width: 640px)");
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
-    if (!wide.matches || reducedMotion.matches || saveData) return;
+    if (reducedMotion.matches || saveData) return;
 
-    const folder = window.devicePixelRatio > 1.25 ? dense : standard;
+    // Phones show the hero at most ~430 px wide, so the 2048 set is sharp even at 3x and keeps the download near 2 MB.
+    const folder = !phone.matches && window.devicePixelRatio > 1.25 ? dense : standard;
     const frames: (HTMLImageElement | undefined)[] = new Array(FRAME_COUNT);
     let loaded = 0;
     let cancelled = false;
@@ -125,7 +126,7 @@ export default function HeroSequence({ standard, dense }: Props) {
     };
 
     const start = () => {
-      if (cancelled || !wide.matches || reducedMotion.matches) return;
+      if (cancelled || reducedMotion.matches) return;
       canvas.width = frames[0]!.naturalWidth;
       canvas.height = Math.round(frames[0]!.naturalWidth / BOX_ASPECT);
       context.fillStyle = "#000";
@@ -163,7 +164,7 @@ export default function HeroSequence({ standard, dense }: Props) {
     else window.addEventListener("load", begin, { once: true });
 
     const settings = () => {
-      if (!wide.matches || reducedMotion.matches) {
+      if (reducedMotion.matches) {
         ready = false;
         figure.classList.remove("is-sequenced");
       } else if (frames[0] && !failed) start();
@@ -171,7 +172,6 @@ export default function HeroSequence({ standard, dense }: Props) {
 
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
-    wide.addEventListener("change", settings);
     reducedMotion.addEventListener("change", settings);
 
     return () => {
@@ -180,7 +180,6 @@ export default function HeroSequence({ standard, dense }: Props) {
       window.removeEventListener("load", begin);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
-      wide.removeEventListener("change", settings);
       reducedMotion.removeEventListener("change", settings);
       figure.classList.remove("is-sequenced");
     };

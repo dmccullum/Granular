@@ -283,8 +283,8 @@ footer a:hover { color: var(--yellow); }
   .opening-words { align-self: flex-start; font-size: clamp(68px, 18.5vw, 82px); }
   .opening-words span:nth-child(2) { margin-left: 14vw; }
   .opening-words em { margin-left: 1vw; }
-  .opening-frame { width: 114vw; max-width: none; align-self: center; position: relative; top: auto; right: auto; margin: -41vw -8vw -24vw -6vw; transform: translateX(9vw) rotate(-1.5deg); }
-  .opening-action { width: min(360px, 100%); margin-top: 38px; }
+  .opening-frame { width: 114vw; max-width: none; align-self: center; position: relative; top: auto; right: auto; margin: -36vw -8vw -36vw -6vw; transform: translateX(1vw) rotate(-1.5deg); }
+  .opening-action { width: min(360px, 100%); margin-top: 18px; }
   .opening-action p { font-size: 15px; }
 
   .workbench { padding: 66px 20px 72px; }
