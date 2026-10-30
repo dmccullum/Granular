@@ -13,6 +13,8 @@ const EASE_IN = 0.3;
 // Frames were rendered along a smoothstep, so frame t shows smoothstep(t) of the full turn; this inverts it.
 const frameForTurn = (turn: number) => 0.5 - Math.sin(Math.asin(1 - 2 * turn) / 3);
 const FRAME_COUNT = 63;
+// Phone frames are kept at this width: about 1.5x the hero's on-screen width at 375 to 430 px, and ~130 MB for all 63.
+const PHONE_WIDTH = 1040;
 // Ease in, then linear, with no slow-down at the end.
 const turnForProgress = (p: number) => {
   const slope = 1 / (1 - EASE_IN / 2);
@@ -55,13 +57,14 @@ export default function HeroSequence({ standard, dense }: Props) {
 
     // Phones show the hero at most ~430 px wide, so the 2048 set is sharp even at 3x and keeps the download near 2 MB.
     const folder = !phone.matches && window.devicePixelRatio > 1.25 ? dense : standard;
-    const frames: (HTMLImageElement | undefined)[] = new Array(FRAME_COUNT);
+    const frames: (CanvasImageSource | undefined)[] = new Array(FRAME_COUNT);
     let loaded = 0;
     let cancelled = false;
     let failed = false;
     let ready = false;
     let frame = 0;
     let drawn = -1;
+    let frameWidth = 0;
 
     // 0 at the top of the page, 1 as the last of the film and canister scrolls past the top of the viewport.
     const progress = () => {
@@ -127,8 +130,8 @@ export default function HeroSequence({ standard, dense }: Props) {
 
     const start = () => {
       if (cancelled || reducedMotion.matches) return;
-      canvas.width = frames[0]!.naturalWidth;
-      canvas.height = Math.round(frames[0]!.naturalWidth / BOX_ASPECT);
+      canvas.width = frameWidth;
+      canvas.height = Math.round(frameWidth / BOX_ASPECT);
       context.fillStyle = "#000";
       context.fillRect(0, 0, canvas.width, canvas.height);
       ready = true;
@@ -148,7 +151,21 @@ export default function HeroSequence({ standard, dense }: Props) {
           stop();
           return;
         }
-        frames[index] = image;
+        if (!frameWidth) frameWidth = phone.matches ? Math.min(image.naturalWidth, PHONE_WIDTH) : image.naturalWidth;
+        // iOS Safari drops decoded images and re-decodes them on every draw, which stutters; keep phone frames as
+        // bitmaps already scaled to the screen so each scroll step is a plain copy.
+        if (frameWidth < image.naturalWidth) {
+          try {
+            frames[index] = await createImageBitmap(image, {
+              resizeWidth: frameWidth,
+              resizeHeight: Math.round(frameWidth / FRAME_ASPECT),
+              resizeQuality: "high",
+            });
+          } catch {
+            frames[index] = image;
+          }
+          if (cancelled) return;
+        } else frames[index] = image;
         loaded += 1;
         if (index === 0) start();
         else {
