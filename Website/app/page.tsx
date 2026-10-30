@@ -25,7 +25,7 @@ export default function Home() {
           <span>Give your</span><span>photos a</span><em>film-like finish.</em>
         </div>
         <figure className="opening-frame" data-parallax="-24">
-          <img src={asset("/film-canister-hero.png")} alt="A 35mm film canister with a curling strip of film" />
+          <img src={asset("/film-canister-hero.webp")} srcSet={`${asset("/film-canister-hero.webp")} 1x, ${asset("/film-canister-hero-2x.webp")} 2x`} alt="A 35mm film canister with a curling strip of colour negative film" />
         </figure>
         <div className="opening-action">
           <p>A native macOS app for adding film-like halation, grain, and more to your images.</p>

@@ -74,7 +74,7 @@ em { font-weight: 500; }
   transform: rotate(-1.5deg);
   mix-blend-mode: screen;
 }
-.opening-frame img { width: 116%; max-width: none; aspect-ratio: 1; object-fit: contain; transform: translateX(-7%); }
+.opening-frame img { width: 162.45%; max-width: none; aspect-ratio: 1.357; object-fit: contain; transform: translateX(-31.1%); }
 .opening-action {
   width: min(720px, 100%);
   margin: clamp(86px, 8vw, 122px) auto 0;
@@ -245,7 +245,7 @@ footer a:hover { color: var(--yellow); }
   .opening-words { font-size: clamp(82px, 12vw, 112px); }
   .opening-words span:nth-child(2) { margin-left: 7vw; }
   .opening-words em { margin-left: 2vw; }
-  .opening-frame { width: min(86vw, 750px); top: clamp(-92px, -8vw, -48px); right: clamp(-104px, -10vw, -54px); }
+  .opening-frame { width: min(86vw, 750px); top: clamp(-150px, -14vw, -90px); right: clamp(-104px, -10vw, -54px); }
   .opening-action { width: min(500px, 76vw); margin-top: clamp(116px, 17vw, 156px); align-self: center; }
 
   .workbench-words { font-size: clamp(78px, 10.5vw, 104px); }
