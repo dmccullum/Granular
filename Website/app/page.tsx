@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import HeroSequence from "./HeroSequence";
 import ParallaxMotion from "./ParallaxMotion";
 import ResultComparison from "./ResultComparison";
 
@@ -26,6 +27,7 @@ export default function Home() {
         </div>
         <figure className="opening-frame" data-parallax="-24">
           <img src={asset("/film-canister-hero.webp")} srcSet={`${asset("/film-canister-hero.webp")} 1x, ${asset("/film-canister-hero-2x.webp")} 2x`} alt="A 35mm film canister with a curling strip of colour negative film" />
+          <HeroSequence standard={asset("/hero-sequence/2048")} dense={asset("/hero-sequence/3072")} />
         </figure>
         <div className="opening-action">
           <p>A native macOS app for adding film-like halation, grain, and more to your images.</p>

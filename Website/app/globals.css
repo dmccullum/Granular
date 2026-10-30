@@ -67,17 +67,21 @@ em { font-weight: 500; }
   width: min(76vw, 1090px);
   margin: 0;
   position: absolute;
-  top: clamp(-220px, -13vw, -166px);
+  top: calc(clamp(-220px, -13vw, -166px) + 60px);
   right: clamp(-116px, -6vw, -54px);
   z-index: 1;
   pointer-events: none;
   transform: rotate(-1.5deg);
   mix-blend-mode: screen;
 }
-.opening-frame img { width: 162.45%; max-width: none; aspect-ratio: 1.357; object-fit: contain; transform: translateX(-31.1%); }
+.opening-frame img, .opening-sequence { width: 162.45%; max-width: none; aspect-ratio: 1.357; object-fit: contain; transform: translateX(-31.1%); }
+/* The scroll sequence sits exactly over the still and inherits the figure's screen blend; the still stays for screen readers. */
+.opening-sequence { display: block; position: absolute; top: 0; left: 0; opacity: 0; }
+.opening-frame.is-sequenced .opening-sequence { opacity: 1; }
+.opening-frame.is-sequenced img { opacity: 0; }
 .opening-action {
   width: min(720px, 100%);
-  margin: clamp(86px, 8vw, 122px) auto 0;
+  margin: calc(clamp(86px, 8vw, 122px) + 160px) auto 0;
   position: relative;
   z-index: 4;
   display: flex;
@@ -245,8 +249,8 @@ footer a:hover { color: var(--yellow); }
   .opening-words { font-size: clamp(82px, 12vw, 112px); }
   .opening-words span:nth-child(2) { margin-left: 7vw; }
   .opening-words em { margin-left: 2vw; }
-  .opening-frame { width: min(86vw, 750px); top: clamp(-150px, -14vw, -90px); right: clamp(-104px, -10vw, -54px); }
-  .opening-action { width: min(500px, 76vw); margin-top: clamp(116px, 17vw, 156px); align-self: center; }
+  .opening-frame { width: min(86vw, 750px); top: calc(clamp(-150px, -14vw, -90px) + 60px); right: clamp(-104px, -10vw, -54px); }
+  .opening-action { width: min(500px, 76vw); margin-top: calc(clamp(116px, 17vw, 156px) + 130px); align-self: center; }
 
   .workbench-words { font-size: clamp(78px, 10.5vw, 104px); }
   .workbench-words em { margin-left: 8vw; }
