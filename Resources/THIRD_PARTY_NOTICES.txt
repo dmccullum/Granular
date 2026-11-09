@@ -43,6 +43,18 @@ simulation is inspired by. All such names are trademarks of their respective
 owners. Granular's looks are simulations; they are not endorsed by, sponsored
 by, or affiliated with those owners.
 
+Camera sounds
+-------------
+
+shutter.caf and wind-on.caf in Sounds are cut from one recording, converted
+to 48 kHz 16-bit mono:
+
+"Canon A-1 Shutter and Film Advance" by lisaisanut
+https://freesound.org/people/lisaisanut/sounds/734819/
+
+Released under CC0 1.0 Universal (public domain dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+
 Barlow Condensed typeface
 -------------------------
 
