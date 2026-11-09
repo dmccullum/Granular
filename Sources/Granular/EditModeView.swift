@@ -101,8 +101,15 @@ final class ViewerZoomController {
         ))
     }
 
+    /// A pinch or scroll step. Reaching or passing Fit or 100% ticks the trackpad.
     func zoom(by factor: Double, around anchor: CGPoint) {
+        let oldScale = scale
         setManualScale(scale * factor, around: anchor)
+        if SliderDetent.crossesAny(
+            from: oldScale, to: scale, detents: [fitScale, ViewerZoomMath.actualSizeScale]
+        ) {
+            Haptics.tick()
+        }
     }
 
     func setPanOffset(_ offset: CGSize) {

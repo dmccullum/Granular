@@ -463,6 +463,12 @@ private struct ParameterSlider: View {
             default: defaultValue,
             format: format,
             preview: { newValue, change in
+                // A drag reaching or passing the default, or reaching either end.
+                if change == .drag, SliderDetent.crossesAny(
+                    from: value, to: newValue, detents: [defaultValue, range.lowerBound, range.upperBound]
+                ) {
+                    Haptics.tick()
+                }
                 // Every change joins the step open for this slider; `commit`
                 // closes it when the drag, nudges or typing end. A reset is
                 // “Reset Exposure”, anything else “Change Exposure”.

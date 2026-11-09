@@ -57,7 +57,7 @@ struct PipelineDial: View {
                 .animation(.easeOut(duration: 0.15), value: selectedIndex)
         }
         .onChange(of: selectedIndex) { _, _ in
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            Haptics.tick()
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Pipeline")

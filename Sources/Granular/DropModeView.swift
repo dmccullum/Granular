@@ -105,6 +105,7 @@ struct DropModeView: View {
             // A frame dragged off the strip and let go over the window stays put.
             let urls = urls.filter { !model.isInstantOutput($0) }
             guard !urls.isEmpty else { return false }
+            Haptics.bump()
             Task { await model.processInstantly(urls) }
             return true
         } isTargeted: { targeted in
@@ -156,6 +157,8 @@ struct DropModeView: View {
         // Runs alongside the window settling, on the same curve.
         withAnimation(.spring(duration: 0.46, bounce: 0.14)) {
             isCanisterSeated = true
+        } completion: {
+            Haptics.tick()
         }
         withAnimation(AppModel.modeTransitionAnimation.delay(0.08)) {
             filmOut = 1
