@@ -23,10 +23,22 @@ mkdir -p "$INTENTS_DIR"
 print -r -- '["AppIntent","EntityQuery","AppEntity","TransientEntity","AppEnum","AppShortcutProviding","AppShortcutsProvider","AnyResolverProviding","AppIntentsPackage","DynamicOptionsProvider","_IntentValueRepresentable","_AssistantIntentsProvider","_GenerativeFunctionExtractable"]' \
     > "$INTENTS_DIR/protocols.json"
 
-swift build -c release \
-    -Xswiftc -emit-const-values-path -Xswiftc "$INTENTS_DIR/Granular.swiftconstvalues" \
-    -Xswiftc -Xfrontend -Xswiftc -const-gather-protocols-file \
-    -Xswiftc -Xfrontend -Xswiftc "$INTENTS_DIR/protocols.json"
+CONST_VALUES="$INTENTS_DIR/Granular.swiftconstvalues"
+build_release() {
+    swift build -c release \
+        -Xswiftc -emit-const-values-path -Xswiftc "$CONST_VALUES" \
+        -Xswiftc -Xfrontend -Xswiftc -const-gather-protocols-file \
+        -Xswiftc -Xfrontend -Xswiftc "$INTENTS_DIR/protocols.json"
+}
+
+build_release
+# When GranularCore is recompiled and Granular isn't (after `swift test`, say),
+# the file is left holding GranularCore's values, which name no intents.
+# Compile Granular again so it writes its own.
+if ! grep -q '"Granular\.' "$CONST_VALUES" 2>/dev/null; then
+    touch "$ROOT/Sources/Granular/AppIntents.swift"
+    build_release
+fi
 
 rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
