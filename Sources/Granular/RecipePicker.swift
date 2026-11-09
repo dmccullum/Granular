@@ -74,6 +74,9 @@ private struct RecipeGrid: View {
                     }
                 }
                 .padding(14)
+                .onHover { isInside in
+                    if !isInside { model.endAudition() }
+                }
             }
             .frame(maxHeight: 460)
             .fixedSize(horizontal: false, vertical: true)
@@ -89,6 +92,7 @@ private struct RecipeGrid: View {
         .focusEffectDisabled()
         .focused($isFocused)
         .onAppear { isFocused = true }
+        .onDisappear { model.endAudition() }
         .onKeyPress(.leftArrow) { move(by: -1) }
         .onKeyPress(.rightArrow) { move(by: 1) }
         .onKeyPress(.upArrow) { move(by: -Self.columnCount) }
@@ -113,7 +117,17 @@ private struct RecipeGrid: View {
                 .foregroundStyle(.secondary)
             LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
                 ForEach(recipes) { recipe in
-                    RecipeTile(recipe: recipe, isSelected: isSelected(recipe)) {
+                    RecipeTile(
+                        recipe: recipe,
+                        isSelected: isSelected(recipe),
+                        hover: { isOver in
+                            if isOver {
+                                model.auditionOnRest(recipe)
+                            } else {
+                                model.cancelPendingAudition()
+                            }
+                        }
+                    ) {
                         model.selectRecipe(recipe)
                     }
                 }
@@ -170,6 +184,7 @@ private struct RecipeTile: View {
 
     let recipe: FilmRecipe
     let isSelected: Bool
+    let hover: (Bool) -> Void
     let select: () -> Void
 
     var body: some View {
@@ -196,6 +211,7 @@ private struct RecipeTile: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+        .onHover(perform: hover)
         .accessibilityLabel(recipe.name)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }

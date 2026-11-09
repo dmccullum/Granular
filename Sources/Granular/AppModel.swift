@@ -220,6 +220,10 @@ final class AppModel {
     /// The size the preview on screen was rendered at.
     @ObservationIgnored var renderedPreviewDimension: CGFloat = 0
     @ObservationIgnored var previewRefinementTask: Task<Void, Never>?
+    /// The stock or recipe under the pointer in a picker grid, shown in the
+    /// preview in place of `recipe` and never saved, exported or undone.
+    @ObservationIgnored var auditionRecipe: FilmRecipe?
+    @ObservationIgnored var auditionTask: Task<Void, Never>?
     @ObservationIgnored var previewWantsRefinement = false
 
     // MARK: Instant processing state

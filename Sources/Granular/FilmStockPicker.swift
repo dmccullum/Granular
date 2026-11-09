@@ -63,6 +63,9 @@ private struct FilmStockGrid: View {
                     }
                 }
                 .padding(14)
+                .onHover { isInside in
+                    if !isInside { model.endAudition() }
+                }
             }
             .frame(width: CGFloat(Self.columnCount) * (FilmStockTile.width + 8) + 20)
             .frame(maxHeight: 560)
@@ -75,6 +78,7 @@ private struct FilmStockGrid: View {
             isFocused = true
             model.refreshStockThumbnails()
         }
+        .onDisappear { model.endAudition() }
         .onChange(of: model.recipe.tone) { _, _ in model.refreshStockThumbnails() }
         .onChange(of: model.selectedSourceURL) { _, _ in model.refreshStockThumbnails() }
         .onKeyPress(.leftArrow) { move(by: -1) }
@@ -99,7 +103,14 @@ private struct FilmStockGrid: View {
                     FilmStockTile(
                         stock: candidate,
                         thumbnail: model.stockThumbnails[candidate],
-                        isSelected: candidate == stock
+                        isSelected: candidate == stock,
+                        hover: { isOver in
+                            if isOver {
+                                model.auditionOnRest(recipe(with: candidate))
+                            } else {
+                                model.cancelPendingAudition()
+                            }
+                        }
                     ) {
                         stock = candidate
                     }
@@ -107,6 +118,16 @@ private struct FilmStockGrid: View {
                 }
             }
         }
+    }
+
+    /// The recipe as choosing `candidate` would leave it.
+    private func recipe(with candidate: FilmStockID) -> FilmRecipe {
+        var recipe = model.recipe
+        recipe.tone.stock = candidate
+        if candidate != .none {
+            recipe.tone.isEnabled = true
+        }
+        return recipe
     }
 
     private func move(by offset: Int) -> KeyPress.Result {
@@ -124,6 +145,7 @@ private struct FilmStockTile: View {
     let stock: FilmStockID
     let thumbnail: NSImage?
     let isSelected: Bool
+    let hover: (Bool) -> Void
     let select: () -> Void
 
     var body: some View {
@@ -161,6 +183,7 @@ private struct FilmStockTile: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+        .onHover(perform: hover)
         .help(stock.vibe)
         .accessibilityLabel(stock.name)
         .accessibilityHint(stock.vibe)

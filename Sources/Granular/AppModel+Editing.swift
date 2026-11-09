@@ -207,7 +207,7 @@ extension AppModel {
     /// exactly the size it's shown. A larger one shrunk to fit softens the
     /// grain by an amount that changes with every zoom level.
     private var previewShowsGrain: Bool {
-        recipe.grain.isEnabled && recipe.grain.amount != 0
+        previewRecipe.grain.isEnabled && previewRecipe.grain.amount != 0
     }
 
     @discardableResult
@@ -235,6 +235,7 @@ extension AppModel {
         previewNeedsRender = false
         previewWantsRefinement = false
         pendingPreviewTransition = nil
+        clearAudition()
         renderedPreviewDimension = 0
     }
 
@@ -267,7 +268,7 @@ extension AppModel {
             do {
                 let image = try await processingService.renderPreview(
                     sourceURL: sourceURL,
-                    recipe: recipe,
+                    recipe: previewRecipe,
                     maximumDimension: dimension,
                     grainDimension: previewShowsGrain ? previewDisplayDimension : nil,
                     highDynamicRange: previewsHDR(sourceURL)

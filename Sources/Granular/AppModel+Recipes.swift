@@ -18,11 +18,14 @@ extension AppModel {
         selectedRecipeID = recipe.id
         self.recipe = recipe
         persistRecipeSelection()
+        clearAudition()
         pendingPreviewTransition = .crossfade
         schedulePreview()
     }
 
     func recipeDidChange() {
+        // Any change to the look ends an audition of another.
+        clearAudition()
         schedulePreview()
         // A slider drag changes the recipe on every tick; save once it rests.
         recipeSaveTask?.cancel()
