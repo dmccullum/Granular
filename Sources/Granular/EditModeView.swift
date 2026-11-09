@@ -991,6 +991,9 @@ extension ZoomControls {
         } label: {
             Text(zoomController.scale, format: .percent.precision(.fractionLength(0)))
                 .monospacedDigit()
+                // Digits roll on an animated jump (Fit, 100%, a preset); a
+                // pinch or the slider isn't animated, so they cut.
+                .contentTransition(.numericText(value: zoomController.scale))
                 .fixedSize()
         }
         .menuStyle(.borderlessButton)

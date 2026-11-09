@@ -362,7 +362,10 @@ private struct EffectCard<Primary: View, Advanced: View>: View {
         InspectorCard(title, systemImage: stage.systemImage, isActive: enabled) {
             CardResetButton("Reset \(title)") {
                 model.pendingPreviewTransition = .crossfade
-                model.changeAdjustments("Reset \(title)", reset)
+                // As the switch does: sliders and any folded content glide.
+                withDMAnimation(.smooth) {
+                    model.changeAdjustments("Reset \(title)", reset)
+                }
             }
             Toggle("Enable \(title)", isOn: animatedEnabled)
                 .labelsHidden()
