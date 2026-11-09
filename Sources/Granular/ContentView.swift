@@ -2,6 +2,27 @@ import AppKit
 import GranularCore
 import SwiftUI
 
+/// Instant mode on its alloy body. The pointer's place is kept here, so
+/// following it redraws the sheen and nothing else.
+private struct CameraBody: View {
+    @State private var pointer: CGPoint?
+
+    var body: some View {
+        ZStack {
+            PointerLitAlloySurface(pointer: pointer)
+                .ignoresSafeArea()
+            DropModeView()
+                .holdingLayoutDuringModeChange(for: .drop)
+        }
+        .onContinuousHover(coordinateSpace: .global) { phase in
+            switch phase {
+            case .active(let location): pointer = location
+            case .ended: pointer = nil
+            }
+        }
+    }
+}
+
 struct ContentView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -44,12 +65,7 @@ struct ContentView: View {
             // once the window has settled, out of sight: taking it away, or
             // drawing it for the first time, held up the start of the move.
             if showsCameraBody || isCameraBodyOnScreen || model.isSettlingWindow {
-                ZStack {
-                    AlloySurface()
-                        .ignoresSafeArea()
-                    DropModeView()
-                        .holdingLayoutDuringModeChange(for: .drop)
-                }
+                CameraBody()
                 // Never quite opaque or quite clear, so fading doesn't change
                 // how it is drawn, which stalled the start of the switch.
                 .opacity(isCameraBodyOnScreen ? 0.999 : 0.001)

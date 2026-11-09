@@ -69,6 +69,35 @@ struct AlloySurface: View {
         }
         .allowsHitTesting(false)
     }
+
+    /// The sheen leaning toward a pointer at `pointer` on a surface of `size`:
+    /// part of the way there, and less so downward, so the light still reads
+    /// as coming from above. The resting sheen when there is no pointer.
+    static func sheenCenter(leaningToward pointer: CGPoint?, in size: CGSize) -> UnitPoint {
+        let rest = restingSheen
+        guard let pointer, size.width > 0, size.height > 0 else { return rest }
+        return UnitPoint(
+            x: rest.x + (pointer.x / size.width - rest.x) * 0.6,
+            y: rest.y + (pointer.y / size.height - rest.y) * 0.35
+        )
+    }
+}
+
+/// The camera body with its sheen leaning toward the pointer, as a satin
+/// casting catches a lamp when you tilt it. `pointer` is in global
+/// coordinates. With Reduce Motion the sheen stays put.
+struct PointerLitAlloySurface: View {
+    var pointer: CGPoint?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GeometryReader { proxy in
+            let frame = proxy.frame(in: .global)
+            let local = reduceMotion ? nil : pointer.map { CGPoint(x: $0.x - frame.minX, y: $0.y - frame.minY) }
+            AlloySurface(sheenCenter: AlloySurface.sheenCenter(leaningToward: local, in: frame.size))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.6), value: pointer)
+        }
+    }
 }
 
 /// A seeded tile of fine light and dark specks for the blasted-metal grain.

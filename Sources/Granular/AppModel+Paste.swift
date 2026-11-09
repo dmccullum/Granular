@@ -102,9 +102,9 @@ extension AppModel {
         let images = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }
         guard !images.isEmpty else { return false }
         for provider in images {
-            _ = provider.loadDataRepresentation(for: .image) { data, _ in
+            _ = provider.loadDataRepresentation(for: .image) { [weak self] data, _ in
                 guard let data else { return }
-                Task { @MainActor [weak self] in
+                Task { @MainActor in
                     self?.openImageData(data, named: "Imported Image")
                 }
             }

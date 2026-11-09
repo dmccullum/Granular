@@ -193,14 +193,7 @@ struct AboutCameraMetal: View {
     }
 
     private func sheenCenter(in size: CGSize) -> UnitPoint {
-        let rest = AlloySurface.restingSheen
-        guard let pointer, !reduceMotion, size.width > 0, size.height > 0 else { return rest }
-        // Part of the way toward the pointer, and less so downward, so the light
-        // still reads as coming from above.
-        return UnitPoint(
-            x: rest.x + (pointer.x / size.width - rest.x) * 0.6,
-            y: rest.y + (pointer.y / size.height - rest.y) * 0.35
-        )
+        AlloySurface.sheenCenter(leaningToward: reduceMotion ? nil : pointer, in: size)
     }
 }
 
