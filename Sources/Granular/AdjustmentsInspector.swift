@@ -71,6 +71,7 @@ private struct FilmToneCard: View {
                 FilmStockPickerButton(stock: Binding {
                     settings.stock
                 } set: { stock in
+                    model.pendingPreviewTransition = .crossfade
                     model.changeAdjustments("Film Stock") {
                         settings.stock = stock
                         // Choosing a stock is a request to see it.
@@ -360,6 +361,7 @@ private struct EffectCard<Primary: View, Advanced: View>: View {
     var body: some View {
         InspectorCard(title, systemImage: stage.systemImage, isActive: enabled) {
             CardResetButton("Reset \(title)") {
+                model.pendingPreviewTransition = .crossfade
                 model.changeAdjustments("Reset \(title)", reset)
             }
             Toggle("Enable \(title)", isOn: animatedEnabled)
@@ -388,6 +390,7 @@ private struct EffectCard<Primary: View, Advanced: View>: View {
         Binding {
             enabled
         } set: { newValue in
+            model.pendingPreviewTransition = .crossfade
             withDMAnimation(.smooth) {
                 model.changeAdjustments(newValue ? "Enable \(title)" : "Disable \(title)") {
                     enabled = newValue
@@ -468,6 +471,11 @@ private struct ParameterSlider: View {
                     from: value, to: newValue, detents: [defaultValue, range.lowerBound, range.upperBound]
                 ) {
                     Haptics.tick()
+                }
+                // A double-click reset or a typed value jumps; a drag or a
+                // nudge follows the hand and must not fade.
+                if change == .reset || change == .typed {
+                    model.pendingPreviewTransition = .crossfade
                 }
                 // Every change joins the step open for this slider; `commit`
                 // closes it when the drag, nudges or typing end. A reset is

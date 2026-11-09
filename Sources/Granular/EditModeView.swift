@@ -471,7 +471,13 @@ private struct ZoomableImageCanvas: View {
             ZStack {
                 Color.clear
                 ZStack {
-                    ViewerImage(image: image, size: displaySize, castsShadow: !canPan)
+                    ViewerImage(
+                        image: image,
+                        size: displaySize,
+                        castsShadow: !canPan,
+                        transitionToken: model.previewTransitionToken,
+                        transition: model.previewTransition
+                    )
                         .contentShape(Rectangle())
                         .gesture(panGesture(canPan: canPan))
                         .processedImageDragSource(isEnabled: !canPan && model.activeCenterTarget == nil)
@@ -571,17 +577,31 @@ private struct ZoomableImageCanvas: View {
 
 /// The image at its size on screen. Its inputs don’t change as the image is
 /// panned, so panning moves it without drawing it again.
+///
+/// A render that arrives under a new `transitionToken` fades in over the one
+/// before it; under the same token the image is replaced in place, which is
+/// how slider drags, sharper renders and Before/After stay cuts.
 private struct ViewerImage: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     let image: NSImage
     let size: CGSize
     let castsShadow: Bool
+    let transitionToken: Int
+    let transition: AppModel.PreviewTransition
 
     var body: some View {
-        Image(nsImage: image)
-            .allowedDynamicRange(.high)
-            .resizable()
-            .interpolation(.high)
-            .frame(width: size.width, height: size.height)
+        ZStack {
+            Image(nsImage: image)
+                .allowedDynamicRange(.high)
+                .resizable()
+                .interpolation(.high)
+                .id(transitionToken)
+                .zIndex(Double(transitionToken))
+                .transition(.fadeInOverPrevious)
+        }
+        .animation(.easeOut(duration: fadeDuration), value: transitionToken)
+        .frame(width: size.width, height: size.height)
             // The shadow is cast by a plain shape behind the image, so it
             // doesn’t trace the image’s pixels as it zooms; once the image
             // fills the viewer, no edge shows to cast one.
@@ -592,6 +612,39 @@ private struct ViewerImage: View {
                         .shadow(color: .black.opacity(0.28), radius: 14, y: 5)
                 }
             }
+    }
+
+    private var fadeDuration: Double {
+        switch transition {
+        case .crossfade: 0.18
+        // Opening an image develops it in; Reduce Motion shortens that to a crossfade.
+        case .develop: reduceMotion ? 0.18 : 0.45
+        }
+    }
+}
+
+private extension AnyTransition {
+    /// Fades the new image in on top of the old one, which stays opaque
+    /// beneath it until the fade ends, so the canvas never shows through.
+    static let fadeInOverPrevious = AnyTransition.asymmetric(
+        insertion: .opacity,
+        // Close enough to opaque to be invisible, but a change, so the old
+        // image is kept for the length of the fade.
+        removal: .opacity(0.99)
+    )
+}
+
+private extension AnyTransition {
+    static func opacity(_ value: Double) -> AnyTransition {
+        .modifier(active: FixedOpacity(opacity: value), identity: FixedOpacity(opacity: 1))
+    }
+}
+
+private struct FixedOpacity: ViewModifier {
+    let opacity: Double
+
+    func body(content: Content) -> some View {
+        content.opacity(opacity)
     }
 }
 

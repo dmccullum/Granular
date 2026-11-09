@@ -18,6 +18,7 @@ extension AppModel {
         selectedRecipeID = recipe.id
         self.recipe = recipe
         persistRecipeSelection()
+        pendingPreviewTransition = .crossfade
         schedulePreview()
     }
 
@@ -224,6 +225,7 @@ extension AppModel {
     }
 
     func randomizeGrain() {
+        pendingPreviewTransition = .crossfade
         changeAdjustments("New Grain Pattern") {
             recipe.grain.seed = UInt32.random(in: 1 ..< 1_000_003)
         }

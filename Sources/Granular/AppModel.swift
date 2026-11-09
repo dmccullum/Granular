@@ -185,6 +185,14 @@ final class AppModel {
     /// True while the compare button or Space is held down, to show the
     /// original for as long as it is held without changing `showOriginal`.
     var isHoldingCompare = false
+    /// How the next preview render arrives. Unset, it replaces the one on
+    /// screen at once, as every step of a slider drag must.
+    @ObservationIgnored var pendingPreviewTransition: PreviewTransition?
+    /// Counts the renders that arrived with a transition; the viewer fades in
+    /// the image under each new count.
+    var previewTransitionToken = 0
+    /// The transition the render under the current count arrived with.
+    var previewTransition = PreviewTransition.crossfade
 
     // MARK: Edit document state
     // Keep each area's new stored state under its own mark.
@@ -268,6 +276,14 @@ final class AppModel {
         restoreFolder(forKey: BookmarkKey.watchInput) { watchedInputFolder = $0 }
         restoreFolder(forKey: BookmarkKey.watchOutput) { watchedOutputFolder = $0 }
         resumeWatchingIfNeeded()
+    }
+
+    /// How a preview render takes the place of the one on screen.
+    enum PreviewTransition {
+        /// A discrete change to the look: a recipe, a stock, a toggle, a reset.
+        case crossfade
+        /// The first render of a newly opened image, over the original.
+        case develop
     }
 
     var previewImage: NSImage? {

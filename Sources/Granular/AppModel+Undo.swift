@@ -109,6 +109,7 @@ extension AppModel {
         let identity = availableRecipes.first { $0.id == state.selectedRecipeID } ?? state.recipe
         selectedRecipeID = state.selectedRecipeID
         recipe = identity.applyingAdjustments(of: state.recipe)
+        pendingPreviewTransition = .crossfade
         recipeDidChange()
     }
 
@@ -139,6 +140,7 @@ extension AppModel {
             NSSound.beep()
             return
         }
+        pendingPreviewTransition = .crossfade
         changeAdjustments("Paste Settings") {
             recipe = recipe.applyingAdjustments(of: settingsOnPasteboard)
         }

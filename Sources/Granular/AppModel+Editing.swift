@@ -103,6 +103,7 @@ extension AppModel {
         clearStatusMessage()
         // Switching modes starts the window's resize.
         operationMode = .edit
+        pendingPreviewTransition = .develop
         schedulePreview()
         return true
     }
@@ -233,14 +234,20 @@ extension AppModel {
         previewRefinementTask = nil
         previewNeedsRender = false
         previewWantsRefinement = false
+        pendingPreviewTransition = nil
         renderedPreviewDimension = 0
     }
 
     private func renderPendingPreviews() async {
         while !Task.isCancelled, let sourceURL = selectedSourceURL, let processingService {
             let dimension: CGFloat
+            // Taken as the render starts, so a render already under way when
+            // the change was made doesn't spend it on the look before.
+            var transition: PreviewTransition?
             if previewNeedsRender {
                 previewNeedsRender = false
+                transition = pendingPreviewTransition
+                pendingPreviewTransition = nil
                 dimension = CGFloat(PreviewSizing.interactiveDimension(
                     for: Double(previewDisplayDimension),
                     limit: Double(Self.interactivePreviewDimension)
@@ -267,6 +274,10 @@ extension AppModel {
                 )
                 guard !Task.isCancelled else { return }
                 processedPreview = NSImage(cgImage: image, size: .zero)
+                if let transition {
+                    previewTransition = transition
+                    previewTransitionToken += 1
+                }
                 renderedPreviewDimension = dimension
             } catch {
                 guard !Task.isCancelled else { return }
