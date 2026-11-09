@@ -381,6 +381,7 @@ extension AppModel {
                 options: outputOptions
             )
             updateJob(job.id, state: .finished(output))
+            playSound(.shutter)
             showStatus(
                 "Exported “\(output.lastPathComponent)”",
                 action: StatusMessage.Action("Show in Finder") { [weak self] in self?.reveal(output) }

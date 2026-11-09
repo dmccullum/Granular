@@ -66,6 +66,12 @@ if (( ${#KERNEL_LIBRARY} != 1 )); then
 fi
 cp "$KERNEL_LIBRARY[1]" "$CONTENTS/Resources/"
 cp -R "$ROOT/Resources/Fonts" "$CONTENTS/Resources/Fonts"
+# The camera cues are optional: without them the app is silent.
+SOUNDS=("$ROOT"/Resources/Sounds/*.caf(N))
+if (( ${#SOUNDS} > 0 )); then
+    mkdir -p "$CONTENTS/Resources/Sounds"
+    cp "${SOUNDS[@]}" "$CONTENTS/Resources/Sounds/"
+fi
 cp "$ROOT/Resources/THIRD_PARTY_NOTICES.txt" "$CONTENTS/Resources/THIRD_PARTY_NOTICES.txt"
 xcrun actool \
     "$ROOT/Resources/Assets.xcassets" \

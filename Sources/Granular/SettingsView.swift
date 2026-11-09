@@ -64,6 +64,10 @@ private struct GeneralSettings: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Sound") {
+                Toggle("Play camera sounds", isOn: $model.playsCameraSounds)
+            }
+
             Section("Menu Bar") {
                 Picker("Show Granular in the menu bar", selection: $model.menuBarVisibility) {
                     ForEach(MenuBarVisibility.allCases) { visibility in

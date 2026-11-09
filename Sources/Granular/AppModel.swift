@@ -159,6 +159,9 @@ final class AppModel {
     var opensInLastUsedMode = false {
         didSet { UserDefaults.standard.set(opensInLastUsedMode, forKey: SettingsKey.opensInLastUsedMode) }
     }
+    var playsCameraSounds = true {
+        didSet { UserDefaults.standard.set(playsCameraSounds, forKey: SettingsKey.playsCameraSounds) }
+    }
     var menuBarVisibility: MenuBarVisibility = .whileWatching {
         didSet { UserDefaults.standard.set(menuBarVisibility.rawValue, forKey: SettingsKey.menuBarVisibility) }
     }
