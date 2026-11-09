@@ -150,6 +150,7 @@ struct GranularDesktopApp: App {
             SidebarCommands()
 
             FileCommands(model: model)
+            ImportFromDevicesCommands()
             // Edit ▸ Undo and Redo, titled with each step's name.
             UndoCommands()
             EditCommands(model: model)

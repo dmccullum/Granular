@@ -103,13 +103,9 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .granularOpenURLs)) { notification in
             guard let urls = notification.object as? [URL] else { return }
-            // Edit mode opens the first and offers the rest to Instant mode.
-            if model.operationMode == .edit {
-                model.openForEditing(urls)
-            } else {
-                Task { await model.processInstantly(urls) }
-            }
+            model.openIncomingImages(urls)
         }
+        .receivingImages(for: model)
         .alert(
             "Granular Couldn’t Start",
             isPresented: Binding(
