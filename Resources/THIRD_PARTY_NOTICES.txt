@@ -52,7 +52,12 @@ to 48 kHz 16-bit mono:
 "Canon A-1 Shutter and Film Advance" by lisaisanut
 https://freesound.org/people/lisaisanut/sounds/734819/
 
-Released under CC0 1.0 Universal (public domain dedication):
+canister-seat.caf in Sounds is cut from another, converted the same way:
+
+"Old SLR film camera - opening back and handle" by khenshom
+https://freesound.org/people/khenshom/sounds/516488/
+
+Both recordings are released under CC0 1.0 Universal (public domain dedication):
 https://creativecommons.org/publicdomain/zero/1.0/
 
 Barlow Condensed typeface
