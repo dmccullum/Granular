@@ -7,7 +7,6 @@ import UniformTypeIdentifiers
 enum SettingsKey {
     static let outputOptions = "settings.outputOptions"
     static let opensInLastUsedMode = "settings.opensInLastUsedMode"
-    static let playsCameraSounds = "settings.playsCameraSounds"
     static let menuBarVisibility = "settings.menuBarVisibility"
     static let lastMode = "settings.lastMode"
     static let wasWatching = "settings.wasWatching"
@@ -43,9 +42,6 @@ extension AppModel {
         }
         if defaults.object(forKey: SettingsKey.opensInLastUsedMode) != nil {
             opensInLastUsedMode = defaults.bool(forKey: SettingsKey.opensInLastUsedMode)
-        }
-        if defaults.object(forKey: SettingsKey.playsCameraSounds) != nil {
-            playsCameraSounds = defaults.bool(forKey: SettingsKey.playsCameraSounds)
         }
         if let raw = defaults.string(forKey: SettingsKey.menuBarVisibility),
            let saved = MenuBarVisibility(rawValue: raw) {

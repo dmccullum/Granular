@@ -147,7 +147,6 @@ struct DropModeView: View {
 
     /// The canister drops into its pocket, then the film pulls out across the gate.
     private func loadFilm() {
-        model.playSound(.canisterSeat)
         guard !reduceMotion else {
             withAnimation(.easeOut(duration: 0.2)) {
                 isCanisterSeated = true
@@ -259,7 +258,6 @@ struct DropModeView: View {
                 exposure = Exposure(jobID: job.id, startedAt: .now)
             }
             loadThumbnail(from: job.sourceURL, for: job.id)
-            model.playSound(.shutter)
         case .finished(let output):
             loadThumbnail(from: output, for: job.id)
             advanceFilm(after: job.id)
@@ -293,7 +291,6 @@ struct DropModeView: View {
             isAdvancing = true
             roll.framesWound += 1
         }
-        model.playSound(.windOn)
         Task {
             try? await Task.sleep(for: .milliseconds(16))
             withAnimation(.easeInOut(duration: reduceMotion ? 0.2 : 0.9)) {

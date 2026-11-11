@@ -10,7 +10,6 @@ Granular is a native macOS app for giving still images a more photographic, film
 
 - **Instant mode** — a film-back interface: pick a recipe from the canister, drop images onto the film strip, and each one is processed and saved right away. An exposure counter tracks the frames you've shot.
 - **Edit mode** — open an image, fine-tune the look with a live preview, inspect details at any zoom level, hold the eye button to compare against the original, then export. Switch between Instant and Edit from the toolbar.
-- **Camera sounds** — a shutter plays when Instant mode starts a frame and when Edit mode finishes an export; a film-advance click plays when the strip winds on; a camera-back latch plays when Instant mode loads the canister. Turn them off with Settings ▸ General ▸ Play camera sounds.
 - **Watched folders** — automatically process new images placed in a selected folder.
 - **Recipes** — start with a small set of built-in looks, then save, rename, reorder, and share your own as `.granularrecipe` files in the Recipe Library (⌥⌘R).
 - **Film tone** — choose from curated color stocks and adjust exposure, contrast, saturation, vibrance, and warmth with a photographic response.
@@ -72,7 +71,7 @@ Detailed setup and troubleshooting instructions are in [BUILDING.md](BUILDING.md
 
 ## Credits and attribution
 
-The three cinema stocks are baked from the MIT-licensed [spectral_film_lut](https://github.com/JanLohse/spectral_film_lut) model; the rest are parametric looks fitted to the author's own reference renderings. The shutter and film-advance sounds are cut from the CC0 recording [Canon A-1 Shutter and Film Advance](https://freesound.org/people/lisaisanut/sounds/734819/) by lisaisanut; the canister sound is cut from the CC0 recording [Old SLR film camera - opening back and handle](https://freesound.org/people/khenshom/sounds/516488/) by khenshom. See [THIRD_PARTY_NOTICES.txt](Resources/THIRD_PARTY_NOTICES.txt) for details.
+The three cinema stocks are baked from the MIT-licensed [spectral_film_lut](https://github.com/JanLohse/spectral_film_lut) model; the rest are parametric looks fitted to the author's own reference renderings. See [THIRD_PARTY_NOTICES.txt](Resources/THIRD_PARTY_NOTICES.txt) for details.
 
 Film-stock and manufacturer names are descriptive only. Granular is not endorsed by or affiliated with their trademark owners.
 
