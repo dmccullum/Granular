@@ -24,22 +24,19 @@ struct RecipeCommands: Commands {
             }
             .disabled(model.operationMode != .edit)
 
-            if model.isSelectedRecipeCustom {
-                Button("Update Current Recipe") {
-                    model.updateSelectedRecipe()
-                }
-                .disabled(!model.isRecipeModified)
+            Button("Update Current Recipe") {
+                model.updateSelectedRecipe()
             }
+            .disabled(!model.isSelectedRecipeCustom || !model.isRecipeModified)
 
             Button("Duplicate Current Recipe") {
                 model.duplicateCurrentRecipe()
             }
 
-            if model.isSelectedRecipeCustom {
-                Button("Delete Current Recipe", role: .destructive) {
-                    model.deleteCurrentRecipe()
-                }
+            Button("Delete Current Recipe", role: .destructive) {
+                model.deleteCurrentRecipe()
             }
+            .disabled(!model.isSelectedRecipeCustom)
 
             Divider()
 

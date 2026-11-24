@@ -293,6 +293,12 @@ private struct CanvasContextMenu: View {
     var body: some View {
         @Bindable var model = model
         if let source = model.selectedSourceURL {
+            Button("Show Original File in Finder") {
+                model.reveal(source)
+            }
+
+            Divider()
+
             Button("Copy") {
                 model.copyProcessedImage()
             }
@@ -315,12 +321,6 @@ private struct CanvasContextMenu: View {
             }
             Button("Actual Size") {
                 zoomController.actualSize()
-            }
-
-            Divider()
-
-            Button("Show Original File in Finder") {
-                model.reveal(source)
             }
         }
     }

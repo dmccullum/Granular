@@ -1269,10 +1269,10 @@ private struct FrameContextMenu: View {
             Button("Open") {
                 model.openOutput(of: frame.id)
             }
+            Divider()
             OpenWithMenu(url: url) { application in
                 model.openOutput(of: frame.id, withApplicationAt: application)
             }
-            Divider()
             if !frame.isUnsaved {
                 Button("Show in Finder") {
                     model.reveal(url)
@@ -1282,14 +1282,14 @@ private struct FrameContextMenu: View {
                 quickLook()
             }
             Divider()
+            Button("Open in Edit Mode") {
+                model.openSourceInEditMode(of: frame.id)
+            }
+            Divider()
             Button("Copy") {
                 model.copyOutput(of: frame.id)
             }
             ShareLink(item: url)
-            Divider()
-            Button("Open in Edit Mode") {
-                model.openSourceInEditMode(of: frame.id)
-            }
             Divider()
             Button(frame.isUnsaved ? "Discard" : "Move to Trash") {
                 model.moveOutputToTrash(of: frame.id)

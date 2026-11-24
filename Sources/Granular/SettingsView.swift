@@ -1,3 +1,4 @@
+import DMKit
 import GranularCore
 import ServiceManagement
 import SwiftUI
@@ -28,7 +29,7 @@ private struct SettingsPane<Content: View>: View {
         Form { content }
             .formStyle(.grouped)
             .scrollDisabled(true)
-            .frame(width: 520)
+            .frame(width: DMLayout.settingsWidth)
             .fixedSize(horizontal: false, vertical: true)
     }
 }

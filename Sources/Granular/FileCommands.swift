@@ -21,11 +21,10 @@ struct FileCommands: Commands {
                 model.openForEditing([url])
             }
 
-            if model.operationMode == .edit, model.selectedSourceURL != nil {
-                Button("Close Image") {
-                    model.closeEditorImage()
-                }
+            Button("Close Image") {
+                model.closeEditorImage()
             }
+            .disabled(model.operationMode != .edit || model.selectedSourceURL == nil)
 
             Divider()
 

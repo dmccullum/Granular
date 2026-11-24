@@ -33,14 +33,7 @@ struct RecipeLibraryView: View {
         }
         .frame(minWidth: 640, minHeight: 420)
         .navigationTitle("Recipe Library")
-        .overlay {
-            if isDropTargeted {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Color.accentColor, lineWidth: 3)
-                    .padding(3)
-                    .allowsHitTesting(false)
-            }
-        }
+        .dropTargetOutline(isDropTargeted)
         .dropDestination(for: URL.self) { urls, _ in
             let recipeFiles = urls.filter(RecipeFile.isRecipeFile)
             guard !recipeFiles.isEmpty else { return false }
